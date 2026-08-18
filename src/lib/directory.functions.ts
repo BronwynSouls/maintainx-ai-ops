@@ -1,9 +1,12 @@
 import { createServerFn } from "@tanstack/react-start";
 
-/** Public directory data used by the guest QR reporting flow. */
+/**
+ * Public directory data used by the guest QR reporting flow.
+ * These tables are not anon-readable; the server exposes only the
+ * minimal, non-sensitive columns needed to file a request.
+ */
 export const getDirectory = createServerFn({ method: "GET" }).handler(async () => {
-  const { createPublicClient } = await import("./public.server");
-  const supabase = createPublicClient();
+  const { supabaseAdmin: supabase } = await import("@/integrations/supabase/client.server");
 
   const [hotels, locations, categories, companies] = await Promise.all([
     supabase.from("hotels").select("id, name, city, country").order("name"),
@@ -27,8 +30,7 @@ export const getDirectory = createServerFn({ method: "GET" }).handler(async () =
 export const resolveQrCode = createServerFn({ method: "GET" })
   .inputValidator((input: { code: string }) => ({ code: String(input.code).slice(0, 64) }))
   .handler(async ({ data }) => {
-    const { createPublicClient } = await import("./public.server");
-    const supabase = createPublicClient();
+    const { supabaseAdmin: supabase } = await import("@/integrations/supabase/client.server");
     const { data: location } = await supabase
       .from("hotel_locations")
       .select("id, name, room_number, hotel_id, hotels(id, name, city)")

@@ -538,15 +538,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      current_company_id: { Args: never; Returns: string }
-      current_hotel_id: { Args: never; Returns: string }
-      has_role: {
-        Args: {
-          _role: Database["public"]["Enums"]["app_role"]
-          _user_id: string
-        }
-        Returns: boolean
-      }
+      [_ in never]: never
     }
     Enums: {
       app_role: "hotel_manager" | "receptionist" | "technician" | "admin"
