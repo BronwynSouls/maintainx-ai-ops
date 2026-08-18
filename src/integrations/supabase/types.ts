@@ -111,6 +111,7 @@ export type Database = {
           country: string | null
           created_at: string
           id: string
+          is_active: boolean
           name: string
           org_type: Database["public"]["Enums"]["org_type"]
           updated_at: string
@@ -121,6 +122,7 @@ export type Database = {
           country?: string | null
           created_at?: string
           id?: string
+          is_active?: boolean
           name: string
           org_type?: Database["public"]["Enums"]["org_type"]
           updated_at?: string
@@ -131,6 +133,7 @@ export type Database = {
           country?: string | null
           created_at?: string
           id?: string
+          is_active?: boolean
           name?: string
           org_type?: Database["public"]["Enums"]["org_type"]
           updated_at?: string
@@ -166,6 +169,7 @@ export type Database = {
           contact_email: string | null
           created_at: string
           id: string
+          is_active: boolean
           name: string
           phone: string | null
           updated_at: string
@@ -174,6 +178,7 @@ export type Database = {
           contact_email?: string | null
           created_at?: string
           id?: string
+          is_active?: boolean
           name: string
           phone?: string | null
           updated_at?: string
@@ -182,9 +187,34 @@ export type Database = {
           contact_email?: string | null
           created_at?: string
           id?: string
+          is_active?: boolean
           name?: string
           phone?: string | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      maintenance_services: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          slug: string
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          slug: string
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          slug?: string
+          sort_order?: number
         }
         Relationships: []
       }
@@ -239,33 +269,75 @@ export type Database = {
           },
         ]
       }
+      technician_services: {
+        Row: {
+          created_at: string
+          id: string
+          service_id: string
+          technician_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          service_id: string
+          technician_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          service_id?: string
+          technician_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "technician_services_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "maintenance_services"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "technician_services_technician_id_fkey"
+            columns: ["technician_id"]
+            isOneToOne: false
+            referencedRelation: "technicians"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       technicians: {
         Row: {
           company_id: string | null
           created_at: string
           full_name: string
+          hotel_id: string | null
           id: string
           is_active: boolean
           profile_id: string | null
           specialty: string | null
+          technician_type: Database["public"]["Enums"]["technician_type"]
         }
         Insert: {
           company_id?: string | null
           created_at?: string
           full_name: string
+          hotel_id?: string | null
           id?: string
           is_active?: boolean
           profile_id?: string | null
           specialty?: string | null
+          technician_type?: Database["public"]["Enums"]["technician_type"]
         }
         Update: {
           company_id?: string | null
           created_at?: string
           full_name?: string
+          hotel_id?: string | null
           id?: string
           is_active?: boolean
           profile_id?: string | null
           specialty?: string | null
+          technician_type?: Database["public"]["Enums"]["technician_type"]
         }
         Relationships: [
           {
@@ -273,6 +345,13 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "maintenance_companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "technicians_hotel_id_fkey"
+            columns: ["hotel_id"]
+            isOneToOne: false
+            referencedRelation: "hotels"
             referencedColumns: ["id"]
           },
           {
@@ -549,6 +628,7 @@ export type Database = {
         | "hotel_manager"
         | "technician"
         | "system"
+      technician_type: "in_house" | "external"
       ticket_priority: "critical" | "medium" | "low"
       ticket_status:
         | "new"
@@ -693,6 +773,7 @@ export const Constants = {
         "technician",
         "system",
       ],
+      technician_type: ["in_house", "external"],
       ticket_priority: ["critical", "medium", "low"],
       ticket_status: [
         "new",
