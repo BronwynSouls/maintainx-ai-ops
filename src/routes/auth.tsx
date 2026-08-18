@@ -209,10 +209,17 @@ function AuthPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="login-password">Password</Label>
-                  <Input
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="login-password">Password</Label>
+                    <Link
+                      to="/forgot-password"
+                      className="text-xs font-medium text-primary underline-offset-4 hover:underline"
+                    >
+                      Forgot password?
+                    </Link>
+                  </div>
+                  <PasswordInput
                     id="login-password"
-                    type="password"
                     autoComplete="current-password"
                     value={loginPassword}
                     onChange={(e) => setLoginPassword(e.target.value)}
@@ -255,9 +262,8 @@ function AuthPage() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="signup-password">Password</Label>
-                  <Input
+                  <PasswordInput
                     id="signup-password"
-                    type="password"
                     autoComplete="new-password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
@@ -265,6 +271,17 @@ function AuthPage() {
                     required
                   />
                   <p className="text-xs text-muted-foreground">At least 8 characters.</p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="signup-confirm-password">Confirm password</Label>
+                  <PasswordInput
+                    id="signup-confirm-password"
+                    autoComplete="new-password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    minLength={8}
+                    required
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="role">Role</Label>
@@ -282,7 +299,32 @@ function AuthPage() {
                   </Select>
                 </div>
 
-                {role === "technician" ? (
+                {isTechnician && (
+                  <div className="space-y-2">
+                    <Label htmlFor="technician-type">Technician type</Label>
+                    <Select
+                      value={technicianType}
+                      onValueChange={(v) => {
+                        setTechnicianType(v as (typeof TECHNICIAN_TYPES)[number]["value"]);
+                        setHotelId("");
+                        setCompanyId("");
+                      }}
+                    >
+                      <SelectTrigger id="technician-type">
+                        <SelectValue placeholder="Select in-house or outsourced" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {TECHNICIAN_TYPES.map((t) => (
+                          <SelectItem key={t.value} value={t.value}>
+                            {t.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {needsCompany && (
                   <div className="space-y-2">
                     <Label htmlFor="company">Maintenance company</Label>
                     <Select value={companyId} onValueChange={setCompanyId}>
@@ -298,7 +340,9 @@ function AuthPage() {
                       </SelectContent>
                     </Select>
                   </div>
-                ) : (
+                )}
+
+                {needsHotel && (
                   <div className="space-y-2">
                     <Label htmlFor="signup-hotel">Hotel</Label>
                     <Select value={hotelId} onValueChange={setHotelId}>
@@ -314,6 +358,29 @@ function AuthPage() {
                       </SelectContent>
                     </Select>
                   </div>
+                )}
+
+                {isTechnician && (
+                  <fieldset className="space-y-2">
+                    <legend className="text-sm font-medium">Services provided</legend>
+                    <div className="space-y-2 rounded-md border border-input p-3">
+                      {(directory?.services ?? []).map((service) => (
+                        <div key={service.id} className="flex items-center gap-2">
+                          <Checkbox
+                            id={`service-${service.id}`}
+                            checked={serviceIds.includes(service.id)}
+                            onCheckedChange={(checked) =>
+                              toggleService(service.id, checked === true)
+                            }
+                          />
+                          <Label htmlFor={`service-${service.id}`} className="font-normal">
+                            {service.name}
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="text-xs text-muted-foreground">Select at least one service.</p>
+                  </fieldset>
                 )}
 
                 {error && (
