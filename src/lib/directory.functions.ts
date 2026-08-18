@@ -8,14 +8,15 @@ import { createServerFn } from "@tanstack/react-start";
 export const getDirectory = createServerFn({ method: "GET" }).handler(async () => {
   const { supabaseAdmin: supabase } = await import("@/integrations/supabase/client.server");
 
-  const [hotels, locations, categories, companies] = await Promise.all([
-    supabase.from("hotels").select("id, name, city, country").order("name"),
+  const [hotels, locations, categories, companies, services] = await Promise.all([
+    supabase.from("hotels").select("id, name, city, country").eq("is_active", true).order("name"),
     supabase
       .from("hotel_locations")
       .select("id, hotel_id, name, room_number, qr_code")
       .order("name"),
     supabase.from("maintenance_categories").select("id, slug, name").order("sort_order"),
-    supabase.from("maintenance_companies").select("id, name").order("name"),
+    supabase.from("maintenance_companies").select("id, name").eq("is_active", true).order("name"),
+    supabase.from("maintenance_services").select("id, slug, name").order("sort_order"),
   ]);
 
   return {
@@ -23,6 +24,7 @@ export const getDirectory = createServerFn({ method: "GET" }).handler(async () =
     locations: locations.data ?? [],
     categories: categories.data ?? [],
     companies: companies.data ?? [],
+    services: services.data ?? [],
   };
 });
 
