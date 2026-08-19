@@ -11,7 +11,11 @@ import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
-import { installStaleChunkRecovery, isStaleChunkError } from "../lib/stale-chunk-recovery";
+import {
+  installStaleChunkRecovery,
+  isStaleChunkError,
+  reloadOnce,
+} from "../lib/stale-chunk-recovery";
 import { ThemeProvider } from "@/lib/theme";
 import { Toaster } from "@/components/ui/sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -43,7 +47,7 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   const router = useRouter();
   useEffect(() => {
     if (isStaleChunkError(error)) {
-      window.location.reload();
+      reloadOnce();
       return;
     }
     reportLovableError(error, { boundary: "tanstack_root_error_component" });

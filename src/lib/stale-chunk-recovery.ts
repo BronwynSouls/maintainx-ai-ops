@@ -12,7 +12,7 @@ function isStaleChunkError(value: unknown): boolean {
   );
 }
 
-function reloadOnce() {
+export function reloadOnce() {
   if (typeof window === "undefined") return;
   if (sessionStorage.getItem(FLAG)) return;
   sessionStorage.setItem(FLAG, "1");
