@@ -1,0 +1,1 @@
+REVOKE ALL ON FUNCTION public.prevent_profile_org_self_assignment() FROM PUBLIC, anon, authenticated;
