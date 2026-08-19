@@ -108,40 +108,47 @@ export type Database = {
         Row: {
           address: string | null
           city: string | null
+          contact_email: string | null
           country: string | null
           created_at: string
           id: string
           is_active: boolean
           name: string
           org_type: Database["public"]["Enums"]["org_type"]
+          phone: string | null
           updated_at: string
         }
         Insert: {
           address?: string | null
           city?: string | null
+          contact_email?: string | null
           country?: string | null
           created_at?: string
           id?: string
           is_active?: boolean
           name: string
           org_type?: Database["public"]["Enums"]["org_type"]
+          phone?: string | null
           updated_at?: string
         }
         Update: {
           address?: string | null
           city?: string | null
+          contact_email?: string | null
           country?: string | null
           created_at?: string
           id?: string
           is_active?: boolean
           name?: string
           org_type?: Database["public"]["Enums"]["org_type"]
+          phone?: string | null
           updated_at?: string
         }
         Relationships: []
       }
       maintenance_categories: {
         Row: {
+          default_service_slug: string | null
           description: string | null
           id: string
           name: string
@@ -149,6 +156,7 @@ export type Database = {
           sort_order: number
         }
         Insert: {
+          default_service_slug?: string | null
           description?: string | null
           id?: string
           name: string
@@ -156,6 +164,7 @@ export type Database = {
           sort_order?: number
         }
         Update: {
+          default_service_slug?: string | null
           description?: string | null
           id?: string
           name?: string
@@ -166,7 +175,10 @@ export type Database = {
       }
       maintenance_companies: {
         Row: {
+          address: string | null
+          city: string | null
           contact_email: string | null
+          country: string | null
           created_at: string
           id: string
           is_active: boolean
@@ -175,7 +187,10 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          address?: string | null
+          city?: string | null
           contact_email?: string | null
+          country?: string | null
           created_at?: string
           id?: string
           is_active?: boolean
@@ -184,7 +199,10 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          address?: string | null
+          city?: string | null
           contact_email?: string | null
+          country?: string | null
           created_at?: string
           id?: string
           is_active?: boolean
@@ -313,6 +331,7 @@ export type Database = {
           hotel_id: string | null
           id: string
           is_active: boolean
+          is_available: boolean
           profile_id: string | null
           specialty: string | null
           technician_type: Database["public"]["Enums"]["technician_type"]
@@ -324,6 +343,7 @@ export type Database = {
           hotel_id?: string | null
           id?: string
           is_active?: boolean
+          is_available?: boolean
           profile_id?: string | null
           specialty?: string | null
           technician_type?: Database["public"]["Enums"]["technician_type"]
@@ -335,6 +355,7 @@ export type Database = {
           hotel_id?: string | null
           id?: string
           is_active?: boolean
+          is_available?: boolean
           profile_id?: string | null
           specialty?: string | null
           technician_type?: Database["public"]["Enums"]["technician_type"]
@@ -456,6 +477,44 @@ export type Database = {
           },
         ]
       }
+      ticket_status_history: {
+        Row: {
+          changed_by: string | null
+          changed_by_label: string | null
+          created_at: string
+          from_status: Database["public"]["Enums"]["ticket_status"] | null
+          id: string
+          ticket_id: string
+          to_status: Database["public"]["Enums"]["ticket_status"]
+        }
+        Insert: {
+          changed_by?: string | null
+          changed_by_label?: string | null
+          created_at?: string
+          from_status?: Database["public"]["Enums"]["ticket_status"] | null
+          id?: string
+          ticket_id: string
+          to_status: Database["public"]["Enums"]["ticket_status"]
+        }
+        Update: {
+          changed_by?: string | null
+          changed_by_label?: string | null
+          created_at?: string
+          from_status?: Database["public"]["Enums"]["ticket_status"] | null
+          id?: string
+          ticket_id?: string
+          to_status?: Database["public"]["Enums"]["ticket_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ticket_status_history_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tickets: {
         Row: {
           ai_category_slug: string | null
@@ -463,8 +522,11 @@ export type Database = {
           ai_model: string | null
           ai_priority: Database["public"]["Enums"]["ticket_priority"] | null
           ai_reason: string | null
+          ai_response_at: string | null
           ai_status: string
+          ai_suggested_response: string | null
           asset_id: string | null
+          assigned_at: string | null
           assigned_technician_id: string | null
           audio_url: string | null
           category_id: string | null
@@ -483,6 +545,7 @@ export type Database = {
           reporter_type: Database["public"]["Enums"]["reporter_type"]
           reporter_user_id: string | null
           resolved_at: string | null
+          started_at: string | null
           status: Database["public"]["Enums"]["ticket_status"]
           ticket_number: string
           title: string | null
@@ -495,8 +558,11 @@ export type Database = {
           ai_model?: string | null
           ai_priority?: Database["public"]["Enums"]["ticket_priority"] | null
           ai_reason?: string | null
+          ai_response_at?: string | null
           ai_status?: string
+          ai_suggested_response?: string | null
           asset_id?: string | null
+          assigned_at?: string | null
           assigned_technician_id?: string | null
           audio_url?: string | null
           category_id?: string | null
@@ -515,6 +581,7 @@ export type Database = {
           reporter_type?: Database["public"]["Enums"]["reporter_type"]
           reporter_user_id?: string | null
           resolved_at?: string | null
+          started_at?: string | null
           status?: Database["public"]["Enums"]["ticket_status"]
           ticket_number: string
           title?: string | null
@@ -527,8 +594,11 @@ export type Database = {
           ai_model?: string | null
           ai_priority?: Database["public"]["Enums"]["ticket_priority"] | null
           ai_reason?: string | null
+          ai_response_at?: string | null
           ai_status?: string
+          ai_suggested_response?: string | null
           asset_id?: string | null
+          assigned_at?: string | null
           assigned_technician_id?: string | null
           audio_url?: string | null
           category_id?: string | null
@@ -547,6 +617,7 @@ export type Database = {
           reporter_type?: Database["public"]["Enums"]["reporter_type"]
           reporter_user_id?: string | null
           resolved_at?: string | null
+          started_at?: string | null
           status?: Database["public"]["Enums"]["ticket_status"]
           ticket_number?: string
           title?: string | null
