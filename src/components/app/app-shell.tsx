@@ -34,11 +34,16 @@ type NavItem = {
 const NAV: NavItem[] = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/tickets", label: "Tickets", icon: Ticket },
+  {
+    to: "/schedule",
+    label: "My Jobs",
+    icon: CalendarClock,
+    roles: ["technician", "hotel_manager", "admin"],
+  },
   { to: "/technicians", label: "Technicians", icon: Users, roles: ["hotel_manager", "admin"] },
   { to: "/clients", label: "Clients", icon: Building2, roles: ["hotel_manager", "admin"] },
-  { to: "/assets", label: "Assets", icon: Boxes },
-  { to: "/ai", label: "AI", icon: Bot },
-  { to: "/schedule", label: "Schedule", icon: CalendarClock },
+  { to: "/assets", label: "Assets", icon: Boxes, roles: ["hotel_manager", "admin"] },
+  { to: "/ai", label: "AI", icon: Bot, roles: ["hotel_manager", "admin"] },
   { to: "/reports", label: "Reports", icon: TrendingUp, roles: ["hotel_manager", "admin"] },
   { to: "/settings", label: "Settings", icon: Settings },
 ];

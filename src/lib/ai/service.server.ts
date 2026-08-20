@@ -118,11 +118,72 @@ export async function classifyMaintenanceRequest(input: {
 }
 
 /* ------------------------------------------------------------------
- * Sprint 2+ extension points. Intentionally not implemented in Sprint 1.
+ * Sprint 2 — AI generated staff/guest response.
+ * ------------------------------------------------------------------ */
+const RESPONSE_PROMPT = `You write short, professional maintenance updates for a hotel operations team.
+Given a maintenance ticket, write ONE concise message (max 3 sentences) that staff can send to the guest or use internally.
+
+Strict rules:
+- Never claim the issue has been fixed unless the ticket status is "resolved".
+- Never invent work that was carried out, parts used, or timelines that are not implied by the status.
+- Acknowledge the issue, reflect the category, priority and current status, and state the next step.
+- Plain text only, no greetings placeholders like [Name], no markdown.`;
+
+export async function generateTicketResponse(input: {
+  description: string;
+  category: string;
+  priority: string;
+  status: string;
+  location?: string | null;
+}): Promise<{ ok: true; message: string } | { ok: false; error: string }> {
+  const apiKey = process.env["LOVABLE_API_KEY"];
+  if (!apiKey) return { ok: false, error: "AI service is not configured." };
+
+  const userContent = [
+    `Issue: ${input.description}`,
+    input.location ? `Location: ${input.location}` : null,
+    `Category: ${input.category}`,
+    `Priority: ${input.priority}`,
+    `Current status: ${input.status}`,
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  try {
+    const response = await fetch(GATEWAY_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+      body: JSON.stringify({
+        model: AI_MODEL,
+        messages: [
+          { role: "system", content: RESPONSE_PROMPT },
+          { role: "user", content: userContent },
+        ],
+      }),
+    });
+
+    if (!response.ok) {
+      if (response.status === 429) return { ok: false, error: "AI rate limit reached." };
+      if (response.status === 402) return { ok: false, error: "AI credits exhausted." };
+      return { ok: false, error: `AI request failed (${response.status}).` };
+    }
+
+    const payload = (await response.json()) as { choices?: { message?: { content?: string } }[] };
+    const message = (payload.choices?.[0]?.message?.content ?? "").trim();
+    if (!message) return { ok: false, error: "AI returned an empty response." };
+    return { ok: true, message: message.slice(0, 1200) };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : "Unknown AI failure." };
+  }
+}
+
+/* ------------------------------------------------------------------
+ * Sprint 3+ extension points. Intentionally not implemented yet.
  * ------------------------------------------------------------------ */
 export const aiCapabilities = {
   classification: true,
-  suggestedResponses: false,
+  suggestedResponses: true,
+  autoAssignment: true,
   imageAnalysis: false,
   voiceTranscription: false,
   workflowAutomation: false,
