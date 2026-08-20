@@ -19,6 +19,7 @@ export type SubmitResult = {
   ticketNumber: string;
   ticketId: string;
   status: string;
+  assignedTo?: string | null;
   ai:
     | { ok: true; categoryName: string; priority: string; reason: string }
     | { ok: false; error: string };
@@ -133,10 +134,48 @@ export const submitMaintenanceRequest = createServerFn({ method: "POST" })
         metadata: { reason: result.reason, confidence: result.confidence },
       });
 
+      // --- Automatic technician assignment (skill + availability aware) ---
+      const { assignTechnician } = await import("./assignment.server");
+      const assignment = await assignTechnician({
+        ticketId: ticket.id,
+        hotelId: data.hotelId,
+        categorySlug: result.categorySlug,
+        priority: result.priority,
+      });
+
+      await supabaseAdmin.from("ticket_activity").insert({
+        ticket_id: ticket.id,
+        actor_label: "MaintainX AI",
+        event_type: assignment.ok ? "assigned" : "assignment_failed",
+        message: assignment.ok
+          ? `Assigned to ${assignment.technicianName} (${assignment.serviceSlug.replace(/_/g, " ")}).`
+          : `Automatic assignment not possible — ${assignment.reason}`,
+      });
+
+      // --- Suggested response (best effort) ---
+      const { generateTicketResponse } = await import("./ai/service.server");
+      const suggestion = await generateTicketResponse({
+        description: data.description,
+        category: category?.name ?? result.categorySlug,
+        priority: result.priority,
+        status: assignment.ok ? "assigned" : "new",
+        location: locationLabel,
+      });
+      if (suggestion.ok) {
+        await supabaseAdmin
+          .from("tickets")
+          .update({
+            ai_suggested_response: suggestion.message,
+            ai_response_at: new Date().toISOString(),
+          })
+          .eq("id", ticket.id);
+      }
+
       return {
         ticketId: ticket.id,
         ticketNumber: ticket.ticket_number,
-        status: "new",
+        status: assignment.ok ? "assigned" : "new",
+        assignedTo: assignment.ok ? assignment.technicianName : null,
         ai: {
           ok: true,
           categoryName: category?.name ?? result.categorySlug,
@@ -171,12 +210,13 @@ const TICKET_SELECT = `
   id, ticket_number, hotel_id, location_id, location_text, description, title,
   image_url, transcription, input_method, reporter_type, reporter_email,
   priority, status, ai_category_slug, ai_priority, ai_reason, ai_confidence,
-  ai_status, needs_manual_classification, assigned_technician_id,
-  created_at, updated_at, resolved_at,
+  ai_status, ai_suggested_response, ai_response_at,
+  needs_manual_classification, assigned_technician_id,
+  created_at, updated_at, resolved_at, assigned_at, started_at,
   hotels ( id, name, city ),
   hotel_locations ( id, name, room_number ),
   maintenance_categories ( id, slug, name ),
-  technicians ( id, full_name )
+  technicians ( id, full_name, technician_type )
 `;
 
 export const listTickets = createServerFn({ method: "GET" })
@@ -215,6 +255,12 @@ export const getTicket = createServerFn({ method: "GET" })
       .eq("is_active", true)
       .order("full_name");
 
+    const { data: statusHistory } = await context.supabase
+      .from("ticket_status_history")
+      .select("id, from_status, to_status, changed_by_label, created_at")
+      .eq("ticket_id", data.id)
+      .order("created_at", { ascending: false });
+
     let imageUrl: string | null = null;
     if (ticket.image_url) {
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -224,7 +270,13 @@ export const getTicket = createServerFn({ method: "GET" })
       imageUrl = signed?.signedUrl ?? null;
     }
 
-    return { ticket, activity: activity ?? [], technicians: technicians ?? [], imageUrl };
+    return {
+      ticket,
+      activity: activity ?? [],
+      technicians: technicians ?? [],
+      statusHistory: statusHistory ?? [],
+      imageUrl,
+    };
   });
 
 export const updateTicket = createServerFn({ method: "POST" })
