@@ -346,3 +346,38 @@ export const updateTicket = createServerFn({ method: "POST" })
 
     return { ok: true };
   });
+
+/** Regenerate the AI suggested response for a ticket. */
+export const regenerateTicketResponse = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { id: string }) => ({ id: z.string().uuid().parse(input.id) }))
+  .handler(async ({ data, context }) => {
+    const { data: ticket, error } = await context.supabase
+      .from("tickets")
+      .select("id, description, priority, status, location_text, maintenance_categories ( name )")
+      .eq("id", data.id)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!ticket) throw new Error("Ticket not found.");
+
+    const { generateTicketResponse } = await import("./ai/service.server");
+    const result = await generateTicketResponse({
+      description: ticket.description,
+      category: ticket.maintenance_categories?.name ?? "Unclassified",
+      priority: ticket.priority,
+      status: ticket.status,
+      location: ticket.location_text,
+    });
+    if (!result.ok) return { ok: false as const, error: result.error };
+
+    const { error: updateError } = await context.supabase
+      .from("tickets")
+      .update({
+        ai_suggested_response: result.message,
+        ai_response_at: new Date().toISOString(),
+      } as never)
+      .eq("id", data.id);
+    if (updateError) throw new Error(updateError.message);
+
+    return { ok: true as const, message: result.message };
+  });
