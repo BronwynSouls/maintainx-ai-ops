@@ -274,6 +274,31 @@ function TicketDetail() {
         <aside className="surface-panel h-fit space-y-4 p-5">
           <h3 className="text-sm font-semibold">Manage ticket</h3>
 
+          {isTechnician && !isManager && (
+            <div className="flex flex-wrap gap-2">
+              {ticket.status !== "in_progress" && ticket.status !== "resolved" && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={mutation.isPending}
+                  onClick={() => mutation.mutate({ status: "in_progress" })}
+                >
+                  Start work
+                </Button>
+              )}
+              {ticket.status !== "resolved" && (
+                <Button
+                  size="sm"
+                  disabled={mutation.isPending}
+                  onClick={() => mutation.mutate({ status: "resolved" })}
+                >
+                  Mark resolved
+                </Button>
+              )}
+            </div>
+          )}
+
+
           <div className="space-y-2">
             <Label htmlFor="ticket-status">Status</Label>
             <Select
