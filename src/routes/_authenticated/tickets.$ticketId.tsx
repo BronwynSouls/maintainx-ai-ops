@@ -70,6 +70,20 @@ function TicketDetail() {
     onError: (error: Error) => toast.error(error.message),
   });
 
+  const responseMutation = useMutation({
+    mutationFn: () => regenerate({ data: { id: ticketId } }),
+    onSuccess: (result) => {
+      if (result.ok) {
+        toast.success("Suggested response updated");
+        queryClient.invalidateQueries({ queryKey: ["ticket", ticketId] });
+      } else {
+        toast.error(result.error);
+      }
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
+
   if (isLoading) {
     return (
       <AppShell title="Ticket">
