@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { listTickets } from "@/lib/tickets.functions";
 import { formatDate, STATUS_META, STATUS_ORDER, type TicketStatus } from "@/lib/domain";
+import { useAccount } from "@/hooks/useAccount";
+
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({
@@ -23,10 +25,12 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
 
 function Dashboard() {
   const fetchTickets = useServerFn(listTickets);
+  const { isTechnician, isManager, isReceptionist } = useAccount();
   const { data, isLoading } = useQuery({
     queryKey: ["tickets"],
     queryFn: () => fetchTickets(),
   });
+
 
   const tickets = data ?? [];
   const open = tickets.filter((t) => t.status !== "resolved");

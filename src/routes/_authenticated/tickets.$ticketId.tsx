@@ -1,10 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowLeft, Sparkles } from "lucide-react";
+import { ArrowLeft, Copy, MessageSquareText, RefreshCw, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/app/app-shell";
 import { PriorityBadge, StatusBadge } from "@/components/app/badges";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
@@ -14,7 +15,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { getTicket, updateTicket } from "@/lib/tickets.functions";
+import { getTicket, regenerateTicketResponse, updateTicket } from "@/lib/tickets.functions";
+import { useAccount } from "@/hooks/useAccount";
 import {
   formatDate,
   PRIORITY_ORDER,
@@ -23,6 +25,7 @@ import {
   type TicketPriority,
   type TicketStatus,
 } from "@/lib/domain";
+
 
 export const Route = createFileRoute("/_authenticated/tickets/$ticketId")({
   head: () => ({
@@ -43,7 +46,10 @@ function TicketDetail() {
   const { ticketId } = Route.useParams();
   const fetchTicket = useServerFn(getTicket);
   const saveTicket = useServerFn(updateTicket);
+  const regenerate = useServerFn(regenerateTicketResponse);
   const queryClient = useQueryClient();
+  const { isTechnician, isManager } = useAccount();
+
 
   const { data, isLoading } = useQuery({
     queryKey: ["ticket", ticketId],
@@ -63,6 +69,20 @@ function TicketDetail() {
     },
     onError: (error: Error) => toast.error(error.message),
   });
+
+  const responseMutation = useMutation({
+    mutationFn: () => regenerate({ data: { id: ticketId } }),
+    onSuccess: (result) => {
+      if (result.ok) {
+        toast.success("Suggested response updated");
+        queryClient.invalidateQueries({ queryKey: ["ticket", ticketId] });
+      } else {
+        toast.error(result.error);
+      }
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
 
   if (isLoading) {
     return (
@@ -164,6 +184,73 @@ function TicketDetail() {
             </p>
           </section>
 
+          <section className="surface-panel p-5">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h3 className="flex items-center gap-2 text-sm font-semibold">
+                <MessageSquareText className="size-4 text-primary" aria-hidden /> AI suggested
+                response
+              </h3>
+              <div className="flex gap-2">
+                {ticket.ai_suggested_response && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      void navigator.clipboard.writeText(ticket.ai_suggested_response ?? "");
+                      toast.success("Response copied");
+                    }}
+                  >
+                    <Copy className="size-4" aria-hidden /> Copy
+                  </Button>
+                )}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={responseMutation.isPending}
+                  onClick={() => responseMutation.mutate()}
+                >
+                  <RefreshCw className="size-4" aria-hidden />
+                  {ticket.ai_suggested_response ? "Regenerate" : "Generate"}
+                </Button>
+              </div>
+            </div>
+            <p className="mt-3 text-sm whitespace-pre-wrap text-muted-foreground">
+              {ticket.ai_suggested_response ??
+                "No suggested response yet — generate one based on the current ticket context."}
+            </p>
+            {ticket.ai_response_at && (
+              <p className="mt-2 text-xs text-muted-foreground">
+                Generated {formatDate(ticket.ai_response_at)} · review before sending to a guest.
+              </p>
+            )}
+          </section>
+
+          <section className="surface-panel">
+            <header className="border-b border-border px-5 py-4">
+              <h3 className="text-sm font-semibold">Status history</h3>
+            </header>
+            <ol className="divide-y divide-border">
+              {(data?.statusHistory ?? []).map((entry) => (
+                <li key={entry.id} className="px-5 py-3">
+                  <p className="text-sm capitalize">
+                    {entry.from_status ? `${entry.from_status.replace("_", " ")} → ` : ""}
+                    <span className="font-medium">{entry.to_status.replace("_", " ")}</span>
+                  </p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    {entry.changed_by_label ?? "System"} · {formatDate(entry.created_at)}
+                  </p>
+                </li>
+              ))}
+              {(data?.statusHistory ?? []).length === 0 && (
+                <li className="px-5 py-4 text-sm text-muted-foreground">
+                  No status changes recorded yet.
+                </li>
+              )}
+            </ol>
+          </section>
+
+
+
           <section className="surface-panel">
             <header className="border-b border-border px-5 py-4">
               <h3 className="text-sm font-semibold">Activity</h3>
@@ -186,6 +273,31 @@ function TicketDetail() {
 
         <aside className="surface-panel h-fit space-y-4 p-5">
           <h3 className="text-sm font-semibold">Manage ticket</h3>
+
+          {isTechnician && !isManager && (
+            <div className="flex flex-wrap gap-2">
+              {ticket.status !== "in_progress" && ticket.status !== "resolved" && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={mutation.isPending}
+                  onClick={() => mutation.mutate({ status: "in_progress" })}
+                >
+                  Start work
+                </Button>
+              )}
+              {ticket.status !== "resolved" && (
+                <Button
+                  size="sm"
+                  disabled={mutation.isPending}
+                  onClick={() => mutation.mutate({ status: "resolved" })}
+                >
+                  Mark resolved
+                </Button>
+              )}
+            </div>
+          )}
+
 
           <div className="space-y-2">
             <Label htmlFor="ticket-status">Status</Label>
