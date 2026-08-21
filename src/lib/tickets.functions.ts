@@ -31,7 +31,7 @@ export type SubmitResult = {
  * The ticket is always saved first; AI classification is best-effort.
  */
 export const submitMaintenanceRequest = createServerFn({ method: "POST" })
-  .inputValidator((input: unknown) => submitSchema.parse(input))
+  .validator((input: unknown) => submitSchema.parse(input))
   .handler(async ({ data }): Promise<SubmitResult> => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
@@ -234,7 +234,7 @@ export const listTickets = createServerFn({ method: "GET" })
 
 export const getTicket = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { id: string }) => ({ id: z.string().uuid().parse(input.id) }))
+  .validator((input: { id: string }) => ({ id: z.string().uuid().parse(input.id) }))
   .handler(async ({ data, context }) => {
     const { data: ticket, error } = await context.supabase
       .from("tickets")
@@ -282,7 +282,7 @@ export const getTicket = createServerFn({ method: "GET" })
 
 export const updateTicket = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) =>
+  .validator((input: unknown) =>
     z
       .object({
         id: z.string().uuid(),
@@ -373,7 +373,7 @@ export const updateTicket = createServerFn({ method: "POST" })
 /** Regenerate the AI suggested response for a ticket. */
 export const regenerateTicketResponse = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { id: string }) => ({ id: z.string().uuid().parse(input.id) }))
+  .validator((input: { id: string }) => ({ id: z.string().uuid().parse(input.id) }))
   .handler(async ({ data, context }) => {
     const { data: ticket, error } = await context.supabase
       .from("tickets")

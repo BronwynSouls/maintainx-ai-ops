@@ -29,7 +29,7 @@ const signupSchema = z
 /** Creates the profile + role record right after a successful sign-up. */
 export const completeSignup = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => signupSchema.parse(input))
+  .validator((input: unknown) => signupSchema.parse(input))
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const isTechnician = data.role === "technician";
@@ -90,7 +90,7 @@ export const getMyAccount = createServerFn({ method: "GET" })
     const [{ data: profile }, { data: roles }] = await Promise.all([
       context.supabase
         .from("profiles")
-        .select("id, full_name, email, hotel_id, company_id, hotels(name), maintenance_companies(name)")
+        .select("id, full_name, email, phone, hotel_id, company_id, hotels(name), maintenance_companies(name)")
         .eq("id", context.userId)
         .maybeSingle(),
       context.supabase.from("user_roles").select("role").eq("user_id", context.userId),
@@ -113,7 +113,7 @@ export type UpdateProfileResult = { ok: true } | { ok: false; error: string };
 /** Let the signed-in user update their own profile name and phone number. */
 export const updateMyProfile = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => updateProfileSchema.parse(input))
+  .validator((input: unknown) => updateProfileSchema.parse(input))
   .handler(async ({ data, context }): Promise<UpdateProfileResult> => {
     const { error } = await context.supabase
       .from("profiles")

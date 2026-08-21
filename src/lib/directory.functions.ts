@@ -30,7 +30,7 @@ export const getDirectory = createServerFn({ method: "GET" }).handler(async () =
 
 /** Resolve a scanned QR code to its hotel + location. */
 export const resolveQrCode = createServerFn({ method: "GET" })
-  .inputValidator((input: { code: string }) => ({ code: String(input.code).slice(0, 64) }))
+  .validator((input: { code: string }) => ({ code: String(input.code).slice(0, 64) }))
   .handler(async ({ data }) => {
     const { supabaseAdmin: supabase } = await import("@/integrations/supabase/client.server");
     const { data: location } = await supabase
