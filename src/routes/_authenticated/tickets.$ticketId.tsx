@@ -1,10 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowLeft, Sparkles } from "lucide-react";
+import { ArrowLeft, Copy, MessageSquareText, RefreshCw, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/app/app-shell";
 import { PriorityBadge, StatusBadge } from "@/components/app/badges";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
@@ -14,7 +15,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { getTicket, updateTicket } from "@/lib/tickets.functions";
+import { getTicket, regenerateTicketResponse, updateTicket } from "@/lib/tickets.functions";
+import { useAccount } from "@/hooks/useAccount";
 import {
   formatDate,
   PRIORITY_ORDER,
@@ -23,6 +25,7 @@ import {
   type TicketPriority,
   type TicketStatus,
 } from "@/lib/domain";
+
 
 export const Route = createFileRoute("/_authenticated/tickets/$ticketId")({
   head: () => ({
