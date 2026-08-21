@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
+import type { TicketStatus } from "@/lib/domain";
 
 const submitSchema = z.object({
   hotelId: z.string().uuid(),
@@ -296,10 +297,19 @@ export const updateTicket = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
+    // Fetch current status so we can record status history
+    const { data: current } = await context.supabase
+      .from("tickets")
+      .select("id, status")
+      .eq("id", data.id)
+      .maybeSingle();
+    const previousStatus = (current as { status?: TicketStatus } | null)?.status ?? null;
+
     const patch: Record<string, unknown> = {};
     if (data.status) {
       patch["status"] = data.status;
       patch["resolved_at"] = data.status === "resolved" ? new Date().toISOString() : null;
+      if (data.status === "in_progress") patch["started_at"] = new Date().toISOString();
     }
     if (data.priority) patch["priority"] = data.priority;
     if (data.categoryId !== undefined) patch["category_id"] = data.categoryId;
@@ -318,6 +328,19 @@ export const updateTicket = createServerFn({ method: "POST" })
       .select("full_name")
       .eq("id", context.userId)
       .maybeSingle();
+    const actorLabel = profile?.full_name || "Staff";
+
+    // Record status change in ticket_status_history
+    const newStatus = (patch["status"] as TicketStatus | undefined) ?? null;
+    if (data.status && newStatus && newStatus !== previousStatus) {
+      await context.supabase.from("ticket_status_history").insert({
+        ticket_id: data.id,
+        from_status: previousStatus,
+        to_status: newStatus,
+        changed_by: context.userId,
+        changed_by_label: actorLabel,
+      });
+    }
 
     const parts: string[] = [];
     if (data.status) parts.push(`status → ${data.status}`);
@@ -330,7 +353,7 @@ export const updateTicket = createServerFn({ method: "POST" })
       await context.supabase.from("ticket_activity").insert({
         ticket_id: data.id,
         actor_user_id: context.userId,
-        actor_label: profile?.full_name || "Staff",
+        actor_label: actorLabel,
         event_type: "updated",
         message: parts.join(" · "),
       });
@@ -380,4 +403,44 @@ export const regenerateTicketResponse = createServerFn({ method: "POST" })
     if (updateError) throw new Error(updateError.message);
 
     return { ok: true as const, message: result.message };
+  });
+
+/**
+ * Sprint 2 — AI-classified tickets with their assigned technicians.
+ * Receptionists use this to see which tickets AI has classified and who was assigned.
+ * Technicians use this to see and update their own assigned work.
+ */
+export const listAiTickets = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data: roles } = await context.supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", context.userId);
+    const roleList = (roles ?? []).map((r) => r.role);
+    const isTechnician = roleList.includes("technician") && !roleList.includes("hotel_manager") && !roleList.includes("admin");
+
+    let query = context.supabase
+      .from("tickets")
+      .select(TICKET_SELECT)
+      .order("created_at", { ascending: false })
+      .limit(200);
+
+    // Technicians only see tickets assigned to them
+    if (isTechnician) {
+      const { data: tech } = await context.supabase
+        .from("technicians")
+        .select("id")
+        .eq("profile_id", context.userId)
+        .maybeSingle();
+      if (tech) {
+        query = query.eq("assigned_technician_id", tech.id);
+      } else {
+        return [];
+      }
+    }
+
+    const { data, error } = await query;
+    if (error) throw new Error(error.message);
+    return data ?? [];
   });

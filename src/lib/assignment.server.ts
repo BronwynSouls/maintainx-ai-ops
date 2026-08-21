@@ -94,6 +94,14 @@ export async function assignTechnician(input: {
     .eq("id", input.ticketId);
   if (error) return { ok: false, reason: error.message };
 
+  // Record the status change from "new" → "assigned" in history
+  await supabaseAdmin.from("ticket_status_history").insert({
+    ticket_id: input.ticketId,
+    from_status: "new",
+    to_status: "assigned",
+    changed_by_label: "MaintainX AI",
+  });
+
   await supabaseAdmin.from("ticket_assignments").insert({
     ticket_id: input.ticketId,
     technician_id: chosen.id,

@@ -102,3 +102,26 @@ export const getMyAccount = createServerFn({ method: "GET" })
       roles: (roles ?? []).map((r) => r.role),
     };
   });
+
+const updateProfileSchema = z.object({
+  fullName: z.string().trim().min(2, "Name must be at least 2 characters").max(120),
+  phone: z.string().trim().max(40).optional().or(z.literal("")),
+});
+
+export type UpdateProfileResult = { ok: true } | { ok: false; error: string };
+
+/** Let the signed-in user update their own profile name and phone number. */
+export const updateMyProfile = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => updateProfileSchema.parse(input))
+  .handler(async ({ data, context }): Promise<UpdateProfileResult> => {
+    const { error } = await context.supabase
+      .from("profiles")
+      .update({
+        full_name: data.fullName,
+        phone: data.phone || null,
+      })
+      .eq("id", context.userId);
+    if (error) return { ok: false, error: error.message };
+    return { ok: true };
+  });

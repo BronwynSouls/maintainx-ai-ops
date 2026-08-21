@@ -3,7 +3,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useState, type ReactNode } from "react";
 import {
   Bot,
-  Boxes,
   Building2,
   CalendarClock,
   LayoutDashboard,
@@ -34,16 +33,13 @@ type NavItem = {
 const NAV: NavItem[] = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/tickets", label: "Tickets", icon: Ticket },
-  {
-    to: "/schedule",
-    label: "My Jobs",
-    icon: CalendarClock,
-    roles: ["technician", "hotel_manager", "admin"],
-  },
+  // Receptionist: Tickets, Clients, AI, Settings (no Schedule)
+  { to: "/clients", label: "Clients", icon: Building2, roles: ["receptionist", "hotel_manager", "admin"] },
+  { to: "/ai", label: "AI", icon: Bot, roles: ["receptionist", "technician", "hotel_manager", "admin"] },
+  // Technician: Dashboard, Tickets, AI, Schedule, Settings (no Technicians/Clients/Reports)
+  { to: "/schedule", label: "My Jobs", icon: CalendarClock, roles: ["technician", "admin"] },
+  // Hotel Manager: Dashboard, Tickets, Technicians, Clients, Reports, Settings (no Assets/AI/Schedule)
   { to: "/technicians", label: "Technicians", icon: Users, roles: ["hotel_manager", "admin"] },
-  { to: "/clients", label: "Clients", icon: Building2, roles: ["hotel_manager", "admin"] },
-  { to: "/assets", label: "Assets", icon: Boxes, roles: ["hotel_manager", "admin"] },
-  { to: "/ai", label: "AI", icon: Bot, roles: ["hotel_manager", "admin"] },
   { to: "/reports", label: "Reports", icon: TrendingUp, roles: ["hotel_manager", "admin"] },
   { to: "/settings", label: "Settings", icon: Settings },
 ];
