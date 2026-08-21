@@ -23,10 +23,12 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
 
 function Dashboard() {
   const fetchTickets = useServerFn(listTickets);
+  const { isTechnician, isManager, isReceptionist } = useAccount();
   const { data, isLoading } = useQuery({
     queryKey: ["tickets"],
     queryFn: () => fetchTickets(),
   });
+
 
   const tickets = data ?? [];
   const open = tickets.filter((t) => t.status !== "resolved");
