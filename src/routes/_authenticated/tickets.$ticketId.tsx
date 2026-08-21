@@ -46,7 +46,10 @@ function TicketDetail() {
   const { ticketId } = Route.useParams();
   const fetchTicket = useServerFn(getTicket);
   const saveTicket = useServerFn(updateTicket);
+  const regenerate = useServerFn(regenerateTicketResponse);
   const queryClient = useQueryClient();
+  const { isTechnician, isManager } = useAccount();
+
 
   const { data, isLoading } = useQuery({
     queryKey: ["ticket", ticketId],
