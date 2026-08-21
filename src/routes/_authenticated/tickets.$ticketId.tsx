@@ -184,6 +184,73 @@ function TicketDetail() {
             </p>
           </section>
 
+          <section className="surface-panel p-5">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h3 className="flex items-center gap-2 text-sm font-semibold">
+                <MessageSquareText className="size-4 text-primary" aria-hidden /> AI suggested
+                response
+              </h3>
+              <div className="flex gap-2">
+                {ticket.ai_suggested_response && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      void navigator.clipboard.writeText(ticket.ai_suggested_response ?? "");
+                      toast.success("Response copied");
+                    }}
+                  >
+                    <Copy className="size-4" aria-hidden /> Copy
+                  </Button>
+                )}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={responseMutation.isPending}
+                  onClick={() => responseMutation.mutate()}
+                >
+                  <RefreshCw className="size-4" aria-hidden />
+                  {ticket.ai_suggested_response ? "Regenerate" : "Generate"}
+                </Button>
+              </div>
+            </div>
+            <p className="mt-3 text-sm whitespace-pre-wrap text-muted-foreground">
+              {ticket.ai_suggested_response ??
+                "No suggested response yet — generate one based on the current ticket context."}
+            </p>
+            {ticket.ai_response_at && (
+              <p className="mt-2 text-xs text-muted-foreground">
+                Generated {formatDate(ticket.ai_response_at)} · review before sending to a guest.
+              </p>
+            )}
+          </section>
+
+          <section className="surface-panel">
+            <header className="border-b border-border px-5 py-4">
+              <h3 className="text-sm font-semibold">Status history</h3>
+            </header>
+            <ol className="divide-y divide-border">
+              {(data?.statusHistory ?? []).map((entry) => (
+                <li key={entry.id} className="px-5 py-3">
+                  <p className="text-sm capitalize">
+                    {entry.from_status ? `${entry.from_status.replace("_", " ")} → ` : ""}
+                    <span className="font-medium">{entry.to_status.replace("_", " ")}</span>
+                  </p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    {entry.changed_by_label ?? "System"} · {formatDate(entry.created_at)}
+                  </p>
+                </li>
+              ))}
+              {(data?.statusHistory ?? []).length === 0 && (
+                <li className="px-5 py-4 text-sm text-muted-foreground">
+                  No status changes recorded yet.
+                </li>
+              )}
+            </ol>
+          </section>
+
+
+
           <section className="surface-panel">
             <header className="border-b border-border px-5 py-4">
               <h3 className="text-sm font-semibold">Activity</h3>
