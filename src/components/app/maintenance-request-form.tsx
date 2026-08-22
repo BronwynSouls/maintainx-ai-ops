@@ -219,18 +219,25 @@ export function MaintenanceRequestForm({
           </p>
         </div>
 
-        <Button
-          variant="outline"
-          onClick={() => {
-            setResult(null);
-            setDescription("");
-            setImageDataUrl("");
-            setTranscription("");
-            setInputMethod("text");
-          }}
-        >
-          Report another issue
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant="outline"
+            onClick={() => {
+              setResult(null);
+              setDescription("");
+              setImageDataUrl("");
+              setTranscription("");
+              setInputMethod("text");
+            }}
+          >
+            Report another issue
+          </Button>
+          <Button asChild variant="secondary">
+            <Link to="/">
+              <ArrowLeft className="size-4" aria-hidden /> Back to Home
+            </Link>
+          </Button>
+        </div>
       </div>
     );
   }
