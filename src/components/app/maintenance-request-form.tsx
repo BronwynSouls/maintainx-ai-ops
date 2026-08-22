@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
+import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { CheckCircle2, ImagePlus, Loader2, Mic, MicOff, Sparkles, X } from "lucide-react";
+import { ArrowLeft, CheckCircle2, ImagePlus, Loader2, Mic, MicOff, Sparkles, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -219,18 +220,25 @@ export function MaintenanceRequestForm({
           </p>
         </div>
 
-        <Button
-          variant="outline"
-          onClick={() => {
-            setResult(null);
-            setDescription("");
-            setImageDataUrl("");
-            setTranscription("");
-            setInputMethod("text");
-          }}
-        >
-          Report another issue
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant="outline"
+            onClick={() => {
+              setResult(null);
+              setDescription("");
+              setImageDataUrl("");
+              setTranscription("");
+              setInputMethod("text");
+            }}
+          >
+            Report another issue
+          </Button>
+          <Button asChild variant="secondary">
+            <Link to="/">
+              <ArrowLeft className="size-4" aria-hidden /> Back to Home
+            </Link>
+          </Button>
+        </div>
       </div>
     );
   }

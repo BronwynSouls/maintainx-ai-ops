@@ -1,8 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { MapPin } from "lucide-react";
+import { ArrowLeft, MapPin } from "lucide-react";
 import { Brand } from "@/components/app/brand";
+import { ThemeToggle } from "@/components/app/theme-toggle";
+import { Button } from "@/components/ui/button";
 import { MaintenanceRequestForm } from "@/components/app/maintenance-request-form";
 import { resolveQrCode } from "@/lib/directory.functions";
 import { t } from "@/lib/i18n";
@@ -44,6 +46,14 @@ function QrReport() {
           <Link to="/">
             <Brand />
           </Link>
+          <div className="flex items-center gap-2">
+            <Button asChild variant="outline" size="sm">
+              <Link to="/">
+                <ArrowLeft className="size-4" aria-hidden /> Back to Home
+              </Link>
+            </Button>
+            <ThemeToggle />
+          </div>
         </div>
       </header>
       <main className="mx-auto max-w-2xl space-y-5 px-4 py-8">

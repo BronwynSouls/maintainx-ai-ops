@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2 } from "lucide-react";
 import { Brand } from "@/components/app/brand";
 import { ThemeToggle } from "@/components/app/theme-toggle";
 import { Button } from "@/components/ui/button";
@@ -44,11 +44,18 @@ function ForgotPasswordPage() {
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
-      <div className="flex items-center justify-between p-4">
+      <div className="flex items-center justify-between gap-2 p-4">
         <Link to="/">
           <Brand />
         </Link>
-        <ThemeToggle />
+        <div className="flex items-center gap-2">
+          <Button asChild variant="outline" size="sm">
+            <Link to="/">
+              <ArrowLeft className="size-4" aria-hidden /> Back to Home
+            </Link>
+          </Button>
+          <ThemeToggle />
+        </div>
       </div>
 
       <div className="mx-auto w-full max-w-md flex-1 px-4 py-10">
