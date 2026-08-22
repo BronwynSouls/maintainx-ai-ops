@@ -59,13 +59,32 @@ function Dashboard() {
   return (
     <AppShell
       title="Dashboard"
-      description="Live maintenance activity across your properties"
+      description={
+        isTechnician && !isManager
+          ? "Jobs assigned to you"
+          : isReceptionist && !isManager
+            ? "Guest reports and ticket status"
+            : "Live maintenance activity across your properties"
+      }
       actions={
-        <Button asChild size="sm">
-          <Link to="/tickets">All tickets</Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          {isTechnician && !isManager && (
+            <Button asChild size="sm" variant="outline">
+              <Link to="/schedule">My jobs</Link>
+            </Button>
+          )}
+          {isReceptionist && !isManager && (
+            <Button asChild size="sm" variant="outline">
+              <Link to="/report">New report</Link>
+            </Button>
+          )}
+          <Button asChild size="sm">
+            <Link to="/tickets">All tickets</Link>
+          </Button>
+        </div>
       }
     >
+
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {cards.map((card) => (
           <div key={card.label} className="surface-panel p-5">
