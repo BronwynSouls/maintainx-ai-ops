@@ -170,11 +170,16 @@ function AuthPage() {
       </div>
 
       <div className="flex flex-col">
-        <div className="flex items-center justify-between p-4">
+        <div className="flex items-center justify-between gap-2 p-4">
           <Link to="/" className="lg:hidden">
             <Brand />
           </Link>
-          <div className="ml-auto">
+          <div className="ml-auto flex items-center gap-2">
+            <Button asChild variant="outline" size="sm">
+              <Link to="/">
+                <ArrowLeft className="size-4" aria-hidden /> Back to Home
+              </Link>
+            </Button>
             <ThemeToggle />
           </div>
         </div>
