@@ -6,19 +6,11 @@
 // You can pass additional config via defineConfig({ vite: { ... }, etc... }) if needed.
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 
-// Ensure the browser-visible Supabase config is always present at build time.
-// The generated client reads import.meta.env.VITE_SUPABASE_*; on the published
-// build only the server-side SUPABASE_* names may be set, which produced
-// "Missing Supabase environment variable(s)" at runtime.
-for (const [viteKey, serverKey] of [
-  ["VITE_SUPABASE_URL", "SUPABASE_URL"],
-  ["VITE_SUPABASE_PUBLISHABLE_KEY", "SUPABASE_PUBLISHABLE_KEY"],
-  ["VITE_SUPABASE_PROJECT_ID", "SUPABASE_PROJECT_ID"],
-] as const) {
-  if (!process.env[viteKey] && process.env[serverKey]) {
-    process.env[viteKey] = process.env[serverKey];
-  }
-}
+// Browser-visible backend config lives in .env.production (public values only:
+// project URL, publishable key, project id). Vite loads it automatically for
+// production builds, so the client bundle always has the right project baked in.
+// Server-side SUPABASE_* values are runtime bindings and are NOT available here.
+
 
 export default defineConfig({
   tanstackStart: {
