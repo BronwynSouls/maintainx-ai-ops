@@ -96,10 +96,26 @@ export const getMyAccount = createServerFn({ method: "GET" })
       context.supabase.from("user_roles").select("role").eq("user_id", context.userId),
     ]);
 
+    const roleList = (roles ?? []).map((r) => r.role);
+
+    // Registered maintenance services (read-only for technicians).
+    let services: string[] = [];
+    if (roleList.includes("technician")) {
+      const { data: technician } = await context.supabase
+        .from("technicians")
+        .select("id, technician_services ( maintenance_services ( name ) )")
+        .eq("profile_id", context.userId)
+        .maybeSingle();
+      services = (technician?.technician_services ?? [])
+        .map((link) => link.maintenance_services?.name)
+        .filter((name): name is string => Boolean(name));
+    }
+
     return {
       userId: context.userId,
       profile: profile ?? null,
-      roles: (roles ?? []).map((r) => r.role),
+      roles: roleList,
+      services,
     };
   });
 
