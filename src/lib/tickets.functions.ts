@@ -77,6 +77,7 @@ export const submitMaintenanceRequest = createServerFn({ method: "POST" })
         title: data.description.slice(0, 80),
         reporter_type: data.reporterType,
         reporter_email: data.reporterEmail || null,
+        notify_reporter: Boolean(data.notifyReporter && data.reporterEmail),
         input_method: data.inputMethod,
         language: data.language,
         transcription: data.transcription || null,
