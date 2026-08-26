@@ -164,18 +164,9 @@ function AuthPage() {
       return;
     }
 
-
     try {
-      await finishSignup({
-        data: {
-          fullName: fullName.trim(),
-          role,
-          hotelId: needsHotel ? hotelId : null,
-          companyId: needsCompany ? companyId : null,
-          technicianType: isTechnician ? technicianType || null : null,
-          serviceIds: isTechnician ? serviceIds : [],
-        },
-      });
+      await finishSignup({ data: profilePayload });
+
       navigate({ to: "/dashboard", replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not finish creating your account.");
