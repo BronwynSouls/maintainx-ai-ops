@@ -83,78 +83,6 @@ export const completeSignup = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-/**
- * Provisions profile/role/technician records from the sign-up metadata that was
- * stored on the auth user. Used after email verification, when the account was
- * created without an immediate session.
- */
-export const provisionAccountFromMetadata = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
-    const { data: existing } = await context.supabase
-      .from("profiles")
-      .select("id")
-      .eq("id", context.userId)
-      .maybeSingle();
-    if (existing) return { ok: true, provisioned: false };
-
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: userRes } = await supabaseAdmin.auth.admin.getUserById(context.userId);
-    const meta = (userRes?.user?.user_metadata ?? {}) as Record<string, unknown>;
-
-    const parsed = signupSchema.safeParse({
-      fullName: meta["full_name"] ?? "",
-      role: meta["signup_role"] ?? "",
-      hotelId: meta["hotel_id"] ?? null,
-      companyId: meta["company_id"] ?? null,
-      technicianType: meta["technician_type"] ?? null,
-      serviceIds: Array.isArray(meta["service_ids"]) ? meta["service_ids"] : [],
-    });
-    if (!parsed.success) return { ok: false, provisioned: false };
-
-    const data = parsed.data;
-    const isTechnician = data.role === "technician";
-    const inHouse = isTechnician && data.technicianType === "in_house";
-    const hotelId = isTechnician ? (inHouse ? (data.hotelId ?? null) : null) : (data.hotelId ?? null);
-    const companyId = isTechnician && !inHouse ? (data.companyId ?? null) : null;
-
-    await supabaseAdmin.from("profiles").upsert({
-      id: context.userId,
-      full_name: data.fullName,
-      email: userRes?.user?.email ?? null,
-      hotel_id: hotelId,
-      company_id: companyId,
-    });
-    await supabaseAdmin
-      .from("user_roles")
-      .upsert({ user_id: context.userId, role: data.role }, { onConflict: "user_id,role" });
-
-    if (isTechnician) {
-      const { data: technician } = await supabaseAdmin
-        .from("technicians")
-        .upsert(
-          {
-            profile_id: context.userId,
-            company_id: companyId,
-            hotel_id: hotelId,
-            technician_type: inHouse ? "in_house" : "external",
-            full_name: data.fullName,
-          },
-          { onConflict: "profile_id" },
-        )
-        .select("id")
-        .maybeSingle();
-      if (technician && data.serviceIds.length > 0) {
-        await supabaseAdmin.from("technician_services").delete().eq("technician_id", technician.id);
-        await supabaseAdmin.from("technician_services").insert(
-          data.serviceIds.map((serviceId) => ({ technician_id: technician.id, service_id: serviceId })),
-        );
-      }
-    }
-
-    return { ok: true, provisioned: true };
-  });
-
 /** Current user's profile, role and organisation. */
 export const getMyAccount = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -168,26 +96,10 @@ export const getMyAccount = createServerFn({ method: "GET" })
       context.supabase.from("user_roles").select("role").eq("user_id", context.userId),
     ]);
 
-    const roleList = (roles ?? []).map((r) => r.role);
-
-    // Registered maintenance services (read-only for technicians).
-    let services: string[] = [];
-    if (roleList.includes("technician")) {
-      const { data: technician } = await context.supabase
-        .from("technicians")
-        .select("id, technician_services ( maintenance_services ( name ) )")
-        .eq("profile_id", context.userId)
-        .maybeSingle();
-      services = (technician?.technician_services ?? [])
-        .map((link) => link.maintenance_services?.name)
-        .filter((name): name is string => Boolean(name));
-    }
-
     return {
       userId: context.userId,
       profile: profile ?? null,
-      roles: roleList,
-      services,
+      roles: (roles ?? []).map((r) => r.role),
     };
   });
 
@@ -203,19 +115,12 @@ export const updateMyProfile = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((input: unknown) => updateProfileSchema.parse(input))
   .handler(async ({ data, context }): Promise<UpdateProfileResult> => {
-    // Technicians cannot change their full name after account creation.
-    const { data: roles } = await context.supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", context.userId);
-    const isTechnician = (roles ?? []).some((r) => r.role === "technician");
-
-    const patch: { phone: string | null; full_name?: string } = { phone: data.phone || null };
-    if (!isTechnician) patch.full_name = data.fullName;
-
     const { error } = await context.supabase
       .from("profiles")
-      .update(patch)
+      .update({
+        full_name: data.fullName,
+        phone: data.phone || null,
+      })
       .eq("id", context.userId);
     if (error) return { ok: false, error: error.message };
     return { ok: true };

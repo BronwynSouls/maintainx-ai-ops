@@ -35,7 +35,7 @@ const NAV: NavItem[] = [
   { to: "/tickets", label: "Tickets", icon: Ticket },
   // Receptionist: Tickets, Clients, AI, Settings (no Schedule)
   { to: "/clients", label: "Clients", icon: Building2, roles: ["receptionist", "hotel_manager", "admin"] },
-  { to: "/ai", label: "AI", icon: Bot, roles: ["receptionist", "hotel_manager", "admin"] },
+  { to: "/ai", label: "AI", icon: Bot, roles: ["receptionist", "technician", "hotel_manager", "admin"] },
   // Technician: Dashboard, Tickets, AI, Schedule, Settings (no Technicians/Clients/Reports)
   { to: "/schedule", label: "My Jobs", icon: CalendarClock, roles: ["technician", "admin"] },
   // Hotel Manager: Dashboard, Tickets, Technicians, Clients, Reports, Settings (no Assets/AI/Schedule)

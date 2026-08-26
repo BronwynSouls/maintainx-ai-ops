@@ -540,7 +540,6 @@ export type Database = {
           location_id: string | null
           location_text: string | null
           needs_manual_classification: boolean
-          notify_reporter: boolean
           priority: Database["public"]["Enums"]["ticket_priority"]
           reporter_email: string | null
           reporter_type: Database["public"]["Enums"]["reporter_type"]
@@ -577,7 +576,6 @@ export type Database = {
           location_id?: string | null
           location_text?: string | null
           needs_manual_classification?: boolean
-          notify_reporter?: boolean
           priority?: Database["public"]["Enums"]["ticket_priority"]
           reporter_email?: string | null
           reporter_type?: Database["public"]["Enums"]["reporter_type"]
@@ -614,7 +612,6 @@ export type Database = {
           location_id?: string | null
           location_text?: string | null
           needs_manual_classification?: boolean
-          notify_reporter?: boolean
           priority?: Database["public"]["Enums"]["ticket_priority"]
           reporter_email?: string | null
           reporter_type?: Database["public"]["Enums"]["reporter_type"]

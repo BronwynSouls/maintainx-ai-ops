@@ -92,9 +92,18 @@ export const ROLE_LABELS: Record<AppRole, string> = {
 export const CATEGORY_SLUGS = [
   "plumbing",
   "electrical",
-  "emergency_maintenance",
   "hvac",
-  "general_maintenance",
+  "appliance",
+  "furniture",
+  "bathroom",
+  "lighting",
+  "doors_locks",
+  "carpentry",
+  "structural",
+  "water_leakage",
+  "cleaning_facilities",
+  "safety",
+  "other",
 ] as const;
 
 export type CategorySlug = (typeof CATEGORY_SLUGS)[number];
@@ -102,22 +111,18 @@ export type CategorySlug = (typeof CATEGORY_SLUGS)[number];
 export const CATEGORY_LABELS: Record<CategorySlug, string> = {
   plumbing: "Plumbing",
   electrical: "Electrical",
-  emergency_maintenance: "Emergency Maintenance",
   hvac: "HVAC / Air Conditioning",
-  general_maintenance: "General Maintenance",
-};
-
-/** Guidance used by the AI classifier so issues land in the right category. */
-export const CATEGORY_DESCRIPTIONS: Record<CategorySlug, string> = {
-  plumbing:
-    "Taps, pipes, leaks, drains, toilets, showers, blocked or overflowing water fittings, hot water supply.",
-  electrical:
-    "Sockets, switches, wiring, lighting, power failures, electrical appliances and electrical fittings.",
-  emergency_maintenance:
-    "Dangerous or urgent safety issues: fire, gas, flooding, electrocution risk, security or anything making the room unsafe or unusable right now.",
-  hvac: "Air conditioning, heating, ventilation, thermostats, extractor fans, airflow and temperature complaints.",
-  general_maintenance:
-    "Broken door handles, doors and door fittings, locks, windows, furniture, cabinets, walls and ceilings, room fixtures, broken non-electrical fittings, and any other hotel maintenance issue that does not clearly belong to plumbing, electrical, HVAC or emergency maintenance.",
+  appliance: "Appliance",
+  furniture: "Furniture",
+  bathroom: "Bathroom",
+  lighting: "Lighting",
+  doors_locks: "Doors / Locks",
+  carpentry: "Carpentry",
+  structural: "Structural",
+  water_leakage: "Water / Leakage",
+  cleaning_facilities: "Cleaning / Facilities",
+  safety: "Safety",
+  other: "Other",
 };
 
 export function formatDate(value: string | null | undefined) {
