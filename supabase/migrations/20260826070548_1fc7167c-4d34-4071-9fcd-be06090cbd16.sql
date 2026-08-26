@@ -1,0 +1,1 @@
+ALTER TABLE public.tickets ADD COLUMN IF NOT EXISTS notify_reporter boolean NOT NULL DEFAULT false;
