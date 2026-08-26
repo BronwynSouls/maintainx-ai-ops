@@ -26,11 +26,19 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
 
 function Dashboard() {
   const fetchTickets = useServerFn(listTickets);
+  const fetchRelevant = useServerFn(getRelevantTickets);
   const { isTechnician, isManager, isReceptionist } = useAccount();
+  const technicianView = isTechnician && !isManager;
   const { data, isLoading } = useQuery({
     queryKey: ["tickets"],
     queryFn: () => fetchTickets(),
   });
+  const relevantQuery = useQuery({
+    queryKey: ["relevant-tickets"],
+    queryFn: () => fetchRelevant(),
+    enabled: technicianView,
+  });
+
 
 
   const tickets = data ?? [];
