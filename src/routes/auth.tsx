@@ -86,9 +86,16 @@ function AuthPage() {
   }
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) navigate({ to: "/dashboard", replace: true });
+    supabase.auth.getSession().then(async ({ data }) => {
+      if (!data.session) return;
+      try {
+        await provisionAccount({ data: {} });
+      } catch {
+        /* already provisioned */
+      }
+      navigate({ to: "/dashboard", replace: true });
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [navigate]);
 
   async function handleLogin(event: React.FormEvent) {
@@ -418,6 +425,10 @@ function AuthPage() {
                     {error}
                   </p>
                 )}
+                <p className="text-xs text-muted-foreground">
+                  We&apos;ll email you a verification link. You must verify your email address
+                  before you can sign in.
+                </p>
                 <Button type="submit" className="w-full" disabled={pending}>
                   {pending && <Loader2 className="size-4 animate-spin" />} Create account
                 </Button>
