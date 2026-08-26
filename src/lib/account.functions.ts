@@ -67,17 +67,15 @@ export const completeSignup = createServerFn({ method: "POST" })
 export const provisionAccountFromMetadata = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const [{ data: profile }, { data: roles }] = await Promise.all([
-      context.supabase.from("profiles").select("id").eq("id", context.userId).maybeSingle(),
-      context.supabase.from("user_roles").select("role").eq("user_id", context.userId),
-    ]);
-    if (profile && (roles?.length ?? 0) > 0) return { ok: true, provisioned: false };
+    const { data: existing } = await context.supabase
+      .from("profiles")
+      .select("id")
+      .eq("id", context.userId)
+      .maybeSingle();
+    if (existing) return { ok: true, provisioned: false };
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: userResult, error: userError } = await supabaseAdmin.auth.admin.getUserById(
-      context.userId,
-    );
-    if (userError) throw new Error(userError.message);
+    const { data: userResult } = await supabaseAdmin.auth.admin.getUserById(context.userId);
 
     const metadata = (userResult.user?.user_metadata ?? {}) as Record<string, unknown>;
     const parsed = signupSchema.safeParse({

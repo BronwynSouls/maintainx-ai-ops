@@ -89,7 +89,11 @@ function AuthPage() {
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data }) => {
       if (!data.session) return;
-      await provisionAccount();
+      try {
+        await provisionAccount();
+      } catch {
+        // A valid session can predate the account metadata used for provisioning.
+      }
       navigate({ to: "/dashboard", replace: true });
     });
   }, [navigate, provisionAccount]);
@@ -108,13 +112,8 @@ function AuthPage() {
     }
     try {
       await provisionAccount();
-    } catch (provisionError) {
-      setPending(false);
-      return setError(
-        provisionError instanceof Error
-          ? provisionError.message
-          : "Could not load your staff account.",
-      );
+    } catch {
+      // Existing users without sign-up metadata can still continue to the dashboard.
     }
     setPending(false);
     navigate({ to: "/dashboard", replace: true });
