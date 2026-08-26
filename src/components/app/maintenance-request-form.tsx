@@ -2,10 +2,20 @@ import { useEffect, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowLeft, CheckCircle2, ImagePlus, Loader2, Mic, MicOff, Sparkles, X } from "lucide-react";
+import {
+  ArrowLeft,
+  CheckCircle2,
+  ImagePlus,
+  Loader2,
+  Mic,
+  MicOff,
+  Sparkles,
+  X,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -60,6 +70,7 @@ export function MaintenanceRequestForm({
   const [locationText, setLocationText] = useState("");
   const [description, setDescription] = useState("");
   const [email, setEmail] = useState("");
+  const [notifyReporter, setNotifyReporter] = useState(false);
   const [imageDataUrl, setImageDataUrl] = useState("");
   const [inputMethod, setInputMethod] = useState<"text" | "voice" | "image">("text");
   const [transcription, setTranscription] = useState("");
@@ -76,7 +87,10 @@ export function MaintenanceRequestForm({
   }, [presetHotelId, presetLocationId]);
 
   useEffect(() => {
-    const w = window as unknown as { SpeechRecognition?: unknown; webkitSpeechRecognition?: unknown };
+    const w = window as unknown as {
+      SpeechRecognition?: unknown;
+      webkitSpeechRecognition?: unknown;
+    };
     setSpeechSupported(Boolean(w.SpeechRecognition ?? w.webkitSpeechRecognition));
   }, []);
 
@@ -139,9 +153,12 @@ export function MaintenanceRequestForm({
     setError(null);
 
     if (!hotelId) return setError("Please select the hotel.");
-    if (!locationId && !locationText.trim()) return setError("Please tell us the room or location.");
-    if (description.trim().length < 5) return setError("Please describe the problem in a few words.");
-    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return setError("Enter a valid email address.");
+    if (!locationId && !locationText.trim())
+      return setError("Please tell us the room or location.");
+    if (description.trim().length < 5)
+      return setError("Please describe the problem in a few words.");
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+      return setError("Enter a valid email address.");
 
     setPending(true);
     try {
@@ -152,6 +169,7 @@ export function MaintenanceRequestForm({
           locationText: locationText.trim(),
           description: description.trim(),
           reporterEmail: email.trim(),
+          notifyReporter: notifyReporter && Boolean(email.trim()),
           reporterType,
           inputMethod,
           transcription,
@@ -248,7 +266,13 @@ export function MaintenanceRequestForm({
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="hotel">{t("guest.hotel")}</Label>
-          <Select value={hotelId} onValueChange={(v) => { setHotelId(v); setLocationId(""); }}>
+          <Select
+            value={hotelId}
+            onValueChange={(v) => {
+              setHotelId(v);
+              setLocationId("");
+            }}
+          >
             <SelectTrigger id="hotel" disabled={isLoading}>
               <SelectValue placeholder={isLoading ? "Loading hotels…" : "Select hotel"} />
             </SelectTrigger>
@@ -370,6 +394,16 @@ export function MaintenanceRequestForm({
             placeholder="you@example.com"
             maxLength={255}
           />
+          <label className="flex items-start gap-2 text-sm text-muted-foreground">
+            <Checkbox
+              id="notify-updates"
+              checked={notifyReporter}
+              onCheckedChange={(checked) => setNotifyReporter(checked === true)}
+              disabled={!email.trim()}
+              className="mt-0.5"
+            />
+            <span>Email me updates when this request is assigned, updated and resolved.</span>
+          </label>
         </div>
       </div>
 

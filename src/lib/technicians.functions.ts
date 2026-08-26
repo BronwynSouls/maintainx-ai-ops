@@ -62,3 +62,52 @@ export const getMySchedule = createServerFn({ method: "GET" })
 
     return { technician, tickets: tickets ?? [] };
   });
+/**
+ * Recent tickets relevant to the signed-in technician's registered services
+ * (e.g. a plumbing technician sees recent plumbing tickets). These are
+ * informational only — technicians cannot assign themselves to them.
+ */
+export const getTechnicianFeed = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data: technician } = await context.supabase
+      .from("technicians")
+      .select(
+        "id, full_name, hotel_id, technician_services ( maintenance_services ( slug, name ) )",
+      )
+      .eq("profile_id", context.userId)
+      .maybeSingle();
+
+    if (!technician) return { services: [], tickets: [] };
+
+    const services = (technician.technician_services ?? [])
+      .map((s) => s.maintenance_services)
+      .filter((s): s is { slug: string; name: string } => Boolean(s));
+
+    if (services.length === 0) return { services: [], tickets: [] };
+
+    const { data: categories } = await context.supabase
+      .from("maintenance_categories")
+      .select("id, slug, name, default_service_slug")
+      .in(
+        "default_service_slug",
+        services.map((s) => s.slug),
+      );
+
+    const categoryIds = (categories ?? []).map((c) => c.id);
+    if (categoryIds.length === 0) return { services, tickets: [] };
+
+    const { data: tickets, error } = await context.supabase
+      .from("tickets")
+      .select(
+        `id, ticket_number, title, status, priority, created_at, location_text,
+         assigned_technician_id, hotel_locations ( name ), maintenance_categories ( name ),
+         hotels ( name )`,
+      )
+      .in("category_id", categoryIds)
+      .order("created_at", { ascending: false })
+      .limit(15);
+    if (error) throw new Error(error.message);
+
+    return { services, tickets: tickets ?? [] };
+  });

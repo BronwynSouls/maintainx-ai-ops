@@ -2,6 +2,8 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 import type { TicketStatus } from "@/lib/domain";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@/integrations/supabase/types";
 
 const submitSchema = z.object({
   hotelId: z.string().uuid(),
@@ -9,6 +11,7 @@ const submitSchema = z.object({
   locationText: z.string().trim().max(160).optional().default(""),
   description: z.string().trim().min(5, "Please describe the problem").max(2000),
   reporterEmail: z.string().trim().email().max(255).optional().or(z.literal("")),
+  notifyReporter: z.boolean().default(false),
   reporterType: z.enum(["guest", "receptionist", "hotel_manager", "technician"]).default("guest"),
   inputMethod: z.enum(["text", "voice", "image"]).default("text"),
   transcription: z.string().trim().max(4000).optional().or(z.literal("")),
@@ -76,6 +79,7 @@ export const submitMaintenanceRequest = createServerFn({ method: "POST" })
         title: data.description.slice(0, 80),
         reporter_type: data.reporterType,
         reporter_email: data.reporterEmail || null,
+        notify_reporter: Boolean(data.notifyReporter && data.reporterEmail),
         input_method: data.inputMethod,
         language: data.language,
         transcription: data.transcription || null,
@@ -153,6 +157,19 @@ export const submitMaintenanceRequest = createServerFn({ method: "POST" })
           : `Automatic assignment not possible — ${assignment.reason}`,
       });
 
+      // --- Notifications (receptionist always, guest only when opted in) ---
+      const { notifyReceptionistsOfAssignment, notifyGuest } =
+        await import("./notifications.server");
+      await notifyReceptionistsOfAssignment({
+        ticketId: ticket.id,
+        assigned: assignment.ok,
+        technicianName: assignment.ok ? assignment.technicianName : null,
+        reason: assignment.ok ? null : assignment.reason,
+      });
+      if (assignment.ok) {
+        await notifyGuest({ ticketId: ticket.id, event: "assigned", status: "assigned" });
+      }
+
       // --- Suggested response (best effort) ---
       const { generateTicketResponse } = await import("./ai/service.server");
       const suggestion = await generateTicketResponse({
@@ -199,6 +216,13 @@ export const submitMaintenanceRequest = createServerFn({ method: "POST" })
       metadata: { error: result.error },
     });
 
+    const { notifyReceptionistsOfAssignment } = await import("./notifications.server");
+    await notifyReceptionistsOfAssignment({
+      ticketId: ticket.id,
+      assigned: false,
+      reason: "AI classification was unavailable, so no technician could be matched.",
+    });
+
     return {
       ticketId: ticket.id,
       ticketNumber: ticket.ticket_number,
@@ -220,14 +244,47 @@ const TICKET_SELECT = `
   technicians ( id, full_name, technician_type )
 `;
 
+/** Roles of the signed-in user plus a "technician only" flag. */
+async function getViewer(context: { supabase: SupabaseClient<Database>; userId: string }) {
+  const { data: roleRows } = await context.supabase
+    .from("user_roles")
+    .select("role")
+    .eq("user_id", context.userId);
+  const roles = ((roleRows ?? []) as { role: string }[]).map((r) => r.role);
+  const technicianOnly =
+    roles.includes("technician") &&
+    !roles.includes("receptionist") &&
+    !roles.includes("hotel_manager") &&
+    !roles.includes("admin");
+  let technicianId: string | null = null;
+  if (technicianOnly) {
+    const { data: tech } = await context.supabase
+      .from("technicians")
+      .select("id")
+      .eq("profile_id", context.userId)
+      .maybeSingle();
+    technicianId = (tech as { id?: string } | null)?.id ?? null;
+  }
+  return { roles, technicianOnly, technicianId };
+}
+
 export const listTickets = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { data, error } = await context.supabase
+    const viewer = await getViewer(context);
+    let query = context.supabase
       .from("tickets")
       .select(TICKET_SELECT)
       .order("created_at", { ascending: false })
       .limit(200);
+
+    // Technicians only ever see the tickets assigned to them.
+    if (viewer.technicianOnly) {
+      if (!viewer.technicianId) return [];
+      query = query.eq("assigned_technician_id", viewer.technicianId);
+    }
+
+    const { data, error } = await query;
     if (error) throw new Error(error.message);
     return data ?? [];
   });
@@ -243,6 +300,14 @@ export const getTicket = createServerFn({ method: "GET" })
       .maybeSingle();
     if (error) throw new Error(error.message);
     if (!ticket) return { ticket: null, activity: [], imageUrl: null, technicians: [] };
+
+    const viewer = await getViewer(context);
+    if (
+      viewer.technicianOnly &&
+      (!viewer.technicianId || ticket.assigned_technician_id !== viewer.technicianId)
+    ) {
+      return { ticket: null, activity: [], imageUrl: null, technicians: [] };
+    }
 
     const { data: activity } = await context.supabase
       .from("ticket_activity")
@@ -297,13 +362,42 @@ export const updateTicket = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
+    const { data: roleRows } = await context.supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", context.userId);
+    const roles = (roleRows ?? []).map((r) => r.role);
+    const canAssign = roles.includes("receptionist") || roles.includes("admin");
+    const isTechnicianOnly =
+      roles.includes("technician") &&
+      !roles.includes("receptionist") &&
+      !roles.includes("hotel_manager") &&
+      !roles.includes("admin");
+
+    if (data.technicianId !== undefined && !canAssign) {
+      throw new Error("Only receptionists can assign or reassign tickets.");
+    }
+
     // Fetch current status so we can record status history
     const { data: current } = await context.supabase
       .from("tickets")
-      .select("id, status")
+      .select("id, status, assigned_technician_id")
       .eq("id", data.id)
       .maybeSingle();
     const previousStatus = (current as { status?: TicketStatus } | null)?.status ?? null;
+
+    if (isTechnicianOnly) {
+      const { data: me } = await context.supabase
+        .from("technicians")
+        .select("id")
+        .eq("profile_id", context.userId)
+        .maybeSingle();
+      const assignedTo = (current as { assigned_technician_id?: string | null } | null)
+        ?.assigned_technician_id;
+      if (!me || !assignedTo || assignedTo !== me.id) {
+        throw new Error("You can only update tickets assigned to you.");
+      }
+    }
 
     const patch: Record<string, unknown> = {};
     if (data.status) {
@@ -319,7 +413,10 @@ export const updateTicket = createServerFn({ method: "POST" })
     }
 
     if (Object.keys(patch).length > 0) {
-      const { error } = await context.supabase.from("tickets").update(patch as never).eq("id", data.id);
+      const { error } = await context.supabase
+        .from("tickets")
+        .update(patch as never)
+        .eq("id", data.id);
       if (error) throw new Error(error.message);
     }
 
@@ -364,6 +461,29 @@ export const updateTicket = createServerFn({ method: "POST" })
         ticket_id: data.id,
         technician_id: data.technicianId,
         assigned_by: context.userId,
+      });
+    }
+
+    // --- Notifications ---
+    const { notifyGuest, notifyReceptionistsOfAssignment } = await import("./notifications.server");
+    if (data.technicianId) {
+      const { data: tech } = await context.supabase
+        .from("technicians")
+        .select("full_name")
+        .eq("id", data.technicianId)
+        .maybeSingle();
+      await notifyReceptionistsOfAssignment({
+        ticketId: data.id,
+        assigned: true,
+        technicianName: tech?.full_name ?? null,
+      });
+      await notifyGuest({ ticketId: data.id, event: "assigned", status: "assigned" });
+    }
+    if (data.status && newStatus && newStatus !== previousStatus) {
+      await notifyGuest({
+        ticketId: data.id,
+        event: newStatus === "resolved" ? "resolved" : "status",
+        status: newStatus,
       });
     }
 
@@ -418,7 +538,10 @@ export const listAiTickets = createServerFn({ method: "GET" })
       .select("role")
       .eq("user_id", context.userId);
     const roleList = (roles ?? []).map((r) => r.role);
-    const isTechnician = roleList.includes("technician") && !roleList.includes("hotel_manager") && !roleList.includes("admin");
+    const isTechnician =
+      roleList.includes("technician") &&
+      !roleList.includes("hotel_manager") &&
+      !roleList.includes("admin");
 
     let query = context.supabase
       .from("tickets")

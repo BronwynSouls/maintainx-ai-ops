@@ -26,12 +26,14 @@ import {
   type TicketStatus,
 } from "@/lib/domain";
 
-
 export const Route = createFileRoute("/_authenticated/tickets/$ticketId")({
   head: () => ({
     meta: [
       { title: "Ticket detail — MaintainX" },
-      { name: "description", content: "Full maintenance ticket detail, AI reasoning and activity." },
+      {
+        name: "description",
+        content: "Full maintenance ticket detail, AI reasoning and activity.",
+      },
       { property: "og:title", content: "Ticket detail — MaintainX" },
       {
         property: "og:description",
@@ -48,8 +50,8 @@ function TicketDetail() {
   const saveTicket = useServerFn(updateTicket);
   const regenerate = useServerFn(regenerateTicketResponse);
   const queryClient = useQueryClient();
-  const { isTechnician, isManager } = useAccount();
-
+  const { isTechnician, isManager, isReceptionist, roles } = useAccount();
+  const canAssign = isReceptionist || roles.includes("admin");
 
   const { data, isLoading } = useQuery({
     queryKey: ["ticket", ticketId],
@@ -83,7 +85,6 @@ function TicketDetail() {
     onError: (error: Error) => toast.error(error.message),
   });
 
-
   if (isLoading) {
     return (
       <AppShell title="Ticket">
@@ -100,7 +101,10 @@ function TicketDetail() {
           <p className="text-sm text-muted-foreground">
             This ticket doesn't exist or you don't have access to it.
           </p>
-          <Link to="/tickets" className="mt-3 inline-block text-sm font-medium text-primary hover:underline">
+          <Link
+            to="/tickets"
+            className="mt-3 inline-block text-sm font-medium text-primary hover:underline"
+          >
             Back to tickets
           </Link>
         </div>
@@ -142,7 +146,9 @@ function TicketDetail() {
               <Field label="Location">
                 {ticket.hotel_locations?.name ?? ticket.location_text ?? "—"}
               </Field>
-              <Field label="Category">{ticket.maintenance_categories?.name ?? "Unclassified"}</Field>
+              <Field label="Category">
+                {ticket.maintenance_categories?.name ?? "Unclassified"}
+              </Field>
               <Field label="Reported by">{ticket.reporter_type}</Field>
               <Field label="Input method">{ticket.input_method}</Field>
               <Field label="Reporter email">{ticket.reporter_email ?? "—"}</Field>
@@ -170,7 +176,9 @@ function TicketDetail() {
                 <Field label="Suggested priority">{ticket.ai_priority ?? "—"}</Field>
                 <Field label="Reason">{ticket.ai_reason ?? "—"}</Field>
                 <Field label="Confidence">
-                  {ticket.ai_confidence != null ? `${Math.round(ticket.ai_confidence * 100)}%` : "—"}
+                  {ticket.ai_confidence != null
+                    ? `${Math.round(ticket.ai_confidence * 100)}%`
+                    : "—"}
                 </Field>
               </dl>
             ) : (
@@ -249,8 +257,6 @@ function TicketDetail() {
             </ol>
           </section>
 
-
-
           <section className="surface-panel">
             <header className="border-b border-border px-5 py-4">
               <h3 className="text-sm font-semibold">Activity</h3>
@@ -298,17 +304,20 @@ function TicketDetail() {
             </div>
           )}
 
-
           <div className="space-y-2">
             <Label htmlFor="ticket-status">Status</Label>
             <Select
               value={ticket.status}
               onValueChange={(v) => mutation.mutate({ status: v as TicketStatus })}
             >
-              <SelectTrigger id="ticket-status"><SelectValue /></SelectTrigger>
+              <SelectTrigger id="ticket-status">
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 {STATUS_ORDER.map((s) => (
-                  <SelectItem key={s} value={s}>{STATUS_META[s].label}</SelectItem>
+                  <SelectItem key={s} value={s}>
+                    {STATUS_META[s].label}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -320,7 +329,9 @@ function TicketDetail() {
               value={ticket.priority}
               onValueChange={(v) => mutation.mutate({ priority: v as TicketPriority })}
             >
-              <SelectTrigger id="ticket-priority"><SelectValue /></SelectTrigger>
+              <SelectTrigger id="ticket-priority">
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 {PRIORITY_ORDER.map((p) => (
                   <SelectItem key={p} value={p}>
@@ -332,25 +343,36 @@ function TicketDetail() {
             </Select>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="ticket-tech">Assigned technician</Label>
-            <Select
-              value={ticket.assigned_technician_id ?? ""}
-              onValueChange={(v) => mutation.mutate({ technicianId: v || null })}
-            >
-              <SelectTrigger id="ticket-tech">
-                <SelectValue placeholder="Unassigned" />
-              </SelectTrigger>
-              <SelectContent>
-                {(data?.technicians ?? []).map((tech) => (
-                  <SelectItem key={tech.id} value={tech.id}>
-                    {tech.full_name}
-                    {tech.specialty ? ` — ${tech.specialty}` : ""}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="space-y-1">
+            <p className="text-xs text-muted-foreground">Assigned technician</p>
+            <p className="text-sm font-medium">{ticket.technicians?.full_name ?? "Unassigned"}</p>
           </div>
+
+          {canAssign && (
+            <div className="space-y-2">
+              <Label htmlFor="ticket-tech">Assign / reassign technician</Label>
+              <Select
+                value={ticket.assigned_technician_id ?? ""}
+                onValueChange={(v) => mutation.mutate({ technicianId: v || null })}
+              >
+                <SelectTrigger id="ticket-tech">
+                  <SelectValue placeholder="Unassigned" />
+                </SelectTrigger>
+                <SelectContent>
+                  {(data?.technicians ?? []).map((tech) => (
+                    <SelectItem key={tech.id} value={tech.id}>
+                      {tech.full_name}
+                      {tech.specialty ? ` — ${tech.specialty}` : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Only receptionists can assign or reassign tickets. AI assigns automatically where
+                possible.
+              </p>
+            </div>
+          )}
         </aside>
       </div>
     </AppShell>
