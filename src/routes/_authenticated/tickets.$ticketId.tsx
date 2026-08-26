@@ -48,7 +48,7 @@ function TicketDetail() {
   const saveTicket = useServerFn(updateTicket);
   const regenerate = useServerFn(regenerateTicketResponse);
   const queryClient = useQueryClient();
-  const { isTechnician, isManager } = useAccount();
+  const { isTechnician, isManager, isReceptionist } = useAccount();
 
 
   const { data, isLoading } = useQuery({
@@ -332,6 +332,7 @@ function TicketDetail() {
             </Select>
           </div>
 
+          {isReceptionist ? (
           <div className="space-y-2">
             <Label htmlFor="ticket-tech">Assigned technician</Label>
             <Select
@@ -350,7 +351,22 @@ function TicketDetail() {
                 ))}
               </SelectContent>
             </Select>
+            <p className="text-xs text-muted-foreground">
+              Only receptionists can assign or reassign tickets. AI assigns automatically where a
+              suitable available technician exists.
+            </p>
           </div>
+          ) : (
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground">Assigned technician</p>
+              <p className="text-sm font-medium">
+                {ticket.technicians?.full_name ?? "Unassigned"}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Only receptionists can assign or reassign tickets.
+              </p>
+            </div>
+          )}
         </aside>
       </div>
     </AppShell>
