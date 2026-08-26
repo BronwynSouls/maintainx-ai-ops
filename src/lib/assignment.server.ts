@@ -20,7 +20,7 @@ export async function assignTechnician(input: {
 }): Promise<AssignmentResult> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-  let serviceSlug = "emergency_maintenance";
+  let serviceSlug = "general_maintenance";
   if (input.categorySlug) {
     const { data: category } = await supabaseAdmin
       .from("maintenance_categories")
@@ -30,10 +30,9 @@ export async function assignTechnician(input: {
     if (category?.default_service_slug) serviceSlug = category.default_service_slug;
   }
 
-  const allowed =
-    input.priority === "critical" && serviceSlug !== "emergency_maintenance"
-      ? [serviceSlug, "emergency_maintenance"]
-      : [serviceSlug];
+  // Only technicians registered for the ticket's own category are eligible.
+  const allowed = [serviceSlug];
+
 
   const { data: services } = await supabaseAdmin
     .from("maintenance_services")
