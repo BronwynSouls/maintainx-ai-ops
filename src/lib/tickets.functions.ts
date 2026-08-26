@@ -341,10 +341,25 @@ export const updateTicket = createServerFn({ method: "POST" })
     // Fetch current status so we can record status history
     const { data: current } = await context.supabase
       .from("tickets")
-      .select("id, status")
+      .select("id, status, assigned_technician_id")
       .eq("id", data.id)
       .maybeSingle();
     const previousStatus = (current as { status?: TicketStatus } | null)?.status ?? null;
+
+    const actor = await getActorContext(context);
+
+    // Only receptionists may assign or reassign a technician.
+    if (data.technicianId !== undefined && !actor.canAssign) {
+      throw new Error("Only receptionists can assign or reassign tickets.");
+    }
+    // Technicians may only update tickets assigned to them.
+    if (actor.isTechnicianOnly) {
+      const assignedTo = (current as { assigned_technician_id?: string | null } | null)
+        ?.assigned_technician_id;
+      if (!actor.technicianId || assignedTo !== actor.technicianId) {
+        throw new Error("You can only update jobs assigned to you.");
+      }
+    }
 
     const patch: Record<string, unknown> = {};
     if (data.status) {
