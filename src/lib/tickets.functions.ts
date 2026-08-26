@@ -234,6 +234,35 @@ export const listTickets = createServerFn({ method: "GET" })
     return data ?? [];
   });
 
+/** Roles + linked technician record for the signed-in user. */
+async function getActorContext(context: { supabase: any; userId: string }) {
+  const { data: roles } = await context.supabase
+    .from("user_roles")
+    .select("role")
+    .eq("user_id", context.userId);
+  const roleList: string[] = (roles ?? []).map((r: { role: string }) => r.role);
+  const isPrivileged = roleList.includes("hotel_manager") || roleList.includes("admin");
+  const isTechnicianOnly = roleList.includes("technician") && !isPrivileged;
+
+  let technicianId: string | null = null;
+  if (roleList.includes("technician")) {
+    const { data: tech } = await context.supabase
+      .from("technicians")
+      .select("id")
+      .eq("profile_id", context.userId)
+      .maybeSingle();
+    technicianId = tech?.id ?? null;
+  }
+
+  return {
+    roles: roleList,
+    isTechnicianOnly,
+    technicianId,
+    /** Only receptionists may assign or reassign tickets manually. */
+    canAssign: roleList.includes("receptionist"),
+  };
+}
+
 export const getTicket = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .validator((input: { id: string }) => ({ id: z.string().uuid().parse(input.id) }))
@@ -245,6 +274,16 @@ export const getTicket = createServerFn({ method: "GET" })
       .maybeSingle();
     if (error) throw new Error(error.message);
     if (!ticket) return { ticket: null, activity: [], imageUrl: null, technicians: [] };
+
+    // Technicians may only open tickets assigned to them.
+    const actor = await getActorContext(context);
+    if (
+      actor.isTechnicianOnly &&
+      (!actor.technicianId || ticket.assigned_technician_id !== actor.technicianId)
+    ) {
+      return { ticket: null, activity: [], statusHistory: [], imageUrl: null, technicians: [] };
+    }
+
 
     const { data: activity } = await context.supabase
       .from("ticket_activity")
