@@ -131,12 +131,19 @@ export const updateMyProfile = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((input: unknown) => updateProfileSchema.parse(input))
   .handler(async ({ data, context }): Promise<UpdateProfileResult> => {
+    // Technicians cannot change their full name after account creation.
+    const { data: roles } = await context.supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", context.userId);
+    const isTechnician = (roles ?? []).some((r) => r.role === "technician");
+
+    const patch: { phone: string | null; full_name?: string } = { phone: data.phone || null };
+    if (!isTechnician) patch.full_name = data.fullName;
+
     const { error } = await context.supabase
       .from("profiles")
-      .update({
-        full_name: data.fullName,
-        phone: data.phone || null,
-      })
+      .update(patch)
       .eq("id", context.userId);
     if (error) return { ok: false, error: error.message };
     return { ok: true };
