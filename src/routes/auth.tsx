@@ -88,7 +88,7 @@ function AuthPage() {
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data }) => {
       if (!data.session) return;
-      await provisionAccount({ data: {} });
+      await provisionAccount();
       navigate({ to: "/dashboard", replace: true });
     });
   }, [navigate, provisionAccount]);
@@ -106,7 +106,7 @@ function AuthPage() {
       return setError(signInError.message);
     }
     try {
-      await provisionAccount({ data: {} });
+      await provisionAccount();
     } catch (provisionError) {
       setPending(false);
       return setError(
