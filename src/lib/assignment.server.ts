@@ -20,7 +20,7 @@ export async function assignTechnician(input: {
 }): Promise<AssignmentResult> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-  let serviceSlug = "emergency_maintenance";
+  let serviceSlug = "general_maintenance";
   if (input.categorySlug) {
     const { data: category } = await supabaseAdmin
       .from("maintenance_categories")

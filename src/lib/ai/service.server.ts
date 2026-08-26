@@ -6,7 +6,7 @@
  * escalation, analytics) by adding functions here — no route or UI rewiring
  * is required because every consumer imports from this single module.
  */
-import { CATEGORY_LABELS, CATEGORY_SLUGS } from "@/lib/domain";
+import { CATEGORY_DESCRIPTIONS, CATEGORY_LABELS, CATEGORY_SLUGS } from "@/lib/domain";
 import type { CategorySlug, TicketPriority } from "@/lib/domain";
 
 const GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
@@ -29,8 +29,13 @@ export type ClassificationFailure = {
 const SYSTEM_PROMPT = `You are the classification engine for MaintainX, a hotel maintenance operations platform.
 Classify a reported maintenance issue into exactly one category and suggest a priority.
 
-Categories (use the slug):
-${CATEGORY_SLUGS.map((s) => `- ${s}: ${CATEGORY_LABELS[s]}`).join("\n")}
+Categories (use the slug). There are exactly five:
+${CATEGORY_SLUGS.map((s) => `- ${s} (${CATEGORY_LABELS[s]}): ${CATEGORY_DESCRIPTIONS[s]}`).join("\n")}
+
+Classification rules:
+- Never force an issue into plumbing, electrical or emergency_maintenance when it does not belong there.
+- Anything that is not clearly plumbing, electrical or HVAC, and is not dangerous/urgent, is general_maintenance.
+- Examples: broken door handle -> general_maintenance; broken furniture -> general_maintenance; damaged cabinet -> general_maintenance; AC not working -> hvac; leaking tap -> plumbing; broken electrical socket -> electrical; dangerous or urgent safety issue -> emergency_maintenance.
 
 Priority guidance:
 - critical: guest safety, flooding, no power/water, gas, fire, security or anything blocking room use.
