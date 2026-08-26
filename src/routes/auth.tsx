@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { getDirectory } from "@/lib/directory.functions";
-import { completeSignup } from "@/lib/account.functions";
+import { completeSignup, provisionAccountFromMetadata } from "@/lib/account.functions";
 import { ROLE_LABELS } from "@/lib/domain";
 
 export const Route = createFileRoute("/auth")({
@@ -53,6 +53,7 @@ function AuthPage() {
   const navigate = useNavigate();
   const loadDirectory = useServerFn(getDirectory);
   const finishSignup = useServerFn(completeSignup);
+  const provisionAccount = useServerFn(provisionAccountFromMetadata);
   const { data: directory } = useQuery({
     queryKey: ["directory"],
     queryFn: () => loadDirectory(),
@@ -85,9 +86,16 @@ function AuthPage() {
   }
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) navigate({ to: "/dashboard", replace: true });
+    supabase.auth.getSession().then(async ({ data }) => {
+      if (!data.session) return;
+      try {
+        await provisionAccount();
+      } catch {
+        /* already provisioned */
+      }
+      navigate({ to: "/dashboard", replace: true });
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [navigate]);
 
   async function handleLogin(event: React.FormEvent) {
@@ -98,8 +106,20 @@ function AuthPage() {
       email: loginEmail.trim(),
       password: loginPassword,
     });
+    if (signInError) {
+      setPending(false);
+      return setError(
+        signInError.message.toLowerCase().includes("not confirmed")
+          ? "Please verify your email address first — check your inbox for the confirmation link."
+          : signInError.message,
+      );
+    }
+    try {
+      await provisionAccount();
+    } catch {
+      /* profile already exists or metadata missing — dashboard will surface it */
+    }
     setPending(false);
-    if (signInError) return setError(signInError.message);
     navigate({ to: "/dashboard", replace: true });
   }
 
@@ -120,7 +140,17 @@ function AuthPage() {
     const { data, error: signUpError } = await supabase.auth.signUp({
       email: email.trim(),
       password,
-      options: { emailRedirectTo: window.location.origin },
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth`,
+        data: {
+          full_name: fullName.trim(),
+          signup_role: role,
+          hotel_id: needsHotel ? hotelId : null,
+          company_id: needsCompany ? companyId : null,
+          technician_type: isTechnician ? technicianType || null : null,
+          service_ids: isTechnician ? serviceIds : [],
+        },
+      },
     });
 
     if (signUpError) {
@@ -130,7 +160,9 @@ function AuthPage() {
 
     if (!data.session) {
       setPending(false);
-      toast.success("Account created — check your email to confirm before signing in.");
+      toast.success(
+        "Account created — check your email and click the verification link before signing in.",
+      );
       return;
     }
 
@@ -393,6 +425,10 @@ function AuthPage() {
                     {error}
                   </p>
                 )}
+                <p className="text-xs text-muted-foreground">
+                  We&apos;ll email you a verification link. You must verify your email address
+                  before you can sign in.
+                </p>
                 <Button type="submit" className="w-full" disabled={pending}>
                   {pending && <Loader2 className="size-4 animate-spin" />} Create account
                 </Button>
