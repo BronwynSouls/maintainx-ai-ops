@@ -24,6 +24,10 @@ import { getDirectory } from "@/lib/directory.functions";
 import { completeSignup } from "@/lib/account.functions";
 import { ROLE_LABELS } from "@/lib/domain";
 
+/** Signup details kept locally until the user verifies their email and signs in. */
+const PENDING_SIGNUP_KEY = "maintainx.pending-signup";
+
+
 export const Route = createFileRoute("/auth")({
   head: () => ({
     meta: [
