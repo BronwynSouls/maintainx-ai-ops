@@ -111,43 +111,96 @@ function Dashboard() {
       </div>
 
       <div className="mt-6 grid gap-5 lg:grid-cols-3">
-        <section className="surface-panel lg:col-span-2">
-          <header className="flex items-center justify-between border-b border-border px-5 py-4">
-            <h2 className="text-sm font-semibold">Recent tickets</h2>
-            <Link to="/tickets" className="text-xs font-medium text-primary hover:underline">
-              View all
-            </Link>
-          </header>
-          <div className="divide-y divide-border">
-            {isLoading && <div className="p-5"><Skeleton className="h-20 w-full" /></div>}
-            {!isLoading && tickets.length === 0 && (
-              <p className="p-5 text-sm text-muted-foreground">
-                No tickets yet. Guest reports will appear here as soon as they are submitted.
-              </p>
-            )}
-            {tickets.slice(0, 8).map((ticket) => (
-              <Link
-                key={ticket.id}
-                to="/tickets/$ticketId"
-                params={{ ticketId: ticket.id }}
-                className="flex flex-col gap-2 px-5 py-4 transition-colors hover:bg-muted/60 sm:flex-row sm:items-center sm:justify-between"
-              >
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium">{ticket.title}</p>
-                  <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                    {ticket.ticket_number} · {ticket.hotels?.name ?? "—"} ·{" "}
-                    {ticket.hotel_locations?.name ?? ticket.location_text ?? "—"} ·{" "}
-                    {formatDate(ticket.created_at)}
-                  </p>
-                </div>
-                <div className="flex shrink-0 items-center gap-2">
-                  <PriorityBadge priority={ticket.priority} />
-                  <StatusBadge status={ticket.status} />
-                </div>
+        {technicianView ? (
+          <section className="surface-panel lg:col-span-2">
+            <header className="flex items-center justify-between border-b border-border px-5 py-4">
+              <div>
+                <h2 className="text-sm font-semibold">Recent tickets in your services</h2>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  {(relevantQuery.data?.services ?? []).map((s) => s.name).join(", ") ||
+                    "No registered services"}
+                  {" — for awareness only; the receptionist assigns work."}
+                </p>
+              </div>
+              <Link to="/schedule" className="text-xs font-medium text-primary hover:underline">
+                My jobs
               </Link>
-            ))}
-          </div>
-        </section>
+            </header>
+            <div className="divide-y divide-border">
+              {relevantQuery.isLoading && (
+                <div className="p-5">
+                  <Skeleton className="h-20 w-full" />
+                </div>
+              )}
+              {!relevantQuery.isLoading && (relevantQuery.data?.tickets ?? []).length === 0 && (
+                <p className="p-5 text-sm text-muted-foreground">
+                  No recent tickets in your registered services.
+                </p>
+              )}
+              {(relevantQuery.data?.tickets ?? []).slice(0, 8).map((ticket) => (
+                <div
+                  key={ticket.id}
+                  className="flex flex-col gap-2 px-5 py-4 sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium">
+                      {ticket.title ?? ticket.ticket_number}
+                    </p>
+                    <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                      {ticket.ticket_number} · {ticket.hotels?.name ?? "—"} ·{" "}
+                      {ticket.hotel_locations?.name ?? ticket.location_text ?? "—"} ·{" "}
+                      {ticket.maintenance_categories?.name ?? "Unclassified"} ·{" "}
+                      {formatDate(ticket.created_at)}
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <PriorityBadge priority={ticket.priority} />
+                    <StatusBadge status={ticket.status} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        ) : (
+          <section className="surface-panel lg:col-span-2">
+            <header className="flex items-center justify-between border-b border-border px-5 py-4">
+              <h2 className="text-sm font-semibold">Recent tickets</h2>
+              <Link to="/tickets" className="text-xs font-medium text-primary hover:underline">
+                View all
+              </Link>
+            </header>
+            <div className="divide-y divide-border">
+              {isLoading && <div className="p-5"><Skeleton className="h-20 w-full" /></div>}
+              {!isLoading && tickets.length === 0 && (
+                <p className="p-5 text-sm text-muted-foreground">
+                  No tickets yet. Guest reports will appear here as soon as they are submitted.
+                </p>
+              )}
+              {tickets.slice(0, 8).map((ticket) => (
+                <Link
+                  key={ticket.id}
+                  to="/tickets/$ticketId"
+                  params={{ ticketId: ticket.id }}
+                  className="flex flex-col gap-2 px-5 py-4 transition-colors hover:bg-muted/60 sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium">{ticket.title}</p>
+                    <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                      {ticket.ticket_number} · {ticket.hotels?.name ?? "—"} ·{" "}
+                      {ticket.hotel_locations?.name ?? ticket.location_text ?? "—"} ·{" "}
+                      {formatDate(ticket.created_at)}
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <PriorityBadge priority={ticket.priority} />
+                    <StatusBadge status={ticket.status} />
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
+
 
         <section className="surface-panel">
           <header className="border-b border-border px-5 py-4">
