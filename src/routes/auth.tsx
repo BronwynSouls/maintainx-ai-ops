@@ -24,6 +24,10 @@ import { getDirectory } from "@/lib/directory.functions";
 import { completeSignup } from "@/lib/account.functions";
 import { ROLE_LABELS } from "@/lib/domain";
 
+/** Signup details kept locally until the user verifies their email and signs in. */
+const PENDING_SIGNUP_KEY = "maintainx.pending-signup";
+
+
 export const Route = createFileRoute("/auth")({
   head: () => ({
     meta: [
@@ -98,8 +102,26 @@ function AuthPage() {
       email: loginEmail.trim(),
       password: loginPassword,
     });
+    if (signInError) {
+      setPending(false);
+      return setError(
+        /confirm/i.test(signInError.message)
+          ? "Please verify your email address first — check your inbox for the verification link."
+          : signInError.message,
+      );
+    }
+
+    // Finish account setup that was deferred until the email was verified.
+    const stored = window.localStorage.getItem(PENDING_SIGNUP_KEY);
+    if (stored) {
+      try {
+        await finishSignup({ data: JSON.parse(stored) });
+      } catch {
+        /* profile may already exist */
+      }
+      window.localStorage.removeItem(PENDING_SIGNUP_KEY);
+    }
     setPending(false);
-    if (signInError) return setError(signInError.message);
     navigate({ to: "/dashboard", replace: true });
   }
 
@@ -120,7 +142,7 @@ function AuthPage() {
     const { data, error: signUpError } = await supabase.auth.signUp({
       email: email.trim(),
       password,
-      options: { emailRedirectTo: window.location.origin },
+      options: { emailRedirectTo: `${window.location.origin}/auth` },
     });
 
     if (signUpError) {
@@ -128,23 +150,27 @@ function AuthPage() {
       return setError(signUpError.message);
     }
 
+    const profilePayload = {
+      fullName: fullName.trim(),
+      role,
+      hotelId: needsHotel ? hotelId : null,
+      companyId: needsCompany ? companyId : null,
+      technicianType: isTechnician ? technicianType || null : null,
+      serviceIds: isTechnician ? serviceIds : [],
+    };
+
     if (!data.session) {
+      window.localStorage.setItem(PENDING_SIGNUP_KEY, JSON.stringify(profilePayload));
       setPending(false);
-      toast.success("Account created — check your email to confirm before signing in.");
+      toast.success(
+        "Account created — verify your email address using the link we just sent, then sign in.",
+      );
       return;
     }
 
     try {
-      await finishSignup({
-        data: {
-          fullName: fullName.trim(),
-          role,
-          hotelId: needsHotel ? hotelId : null,
-          companyId: needsCompany ? companyId : null,
-          technicianType: isTechnician ? technicianType || null : null,
-          serviceIds: isTechnician ? serviceIds : [],
-        },
-      });
+      await finishSignup({ data: profilePayload });
+
       navigate({ to: "/dashboard", replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not finish creating your account.");
