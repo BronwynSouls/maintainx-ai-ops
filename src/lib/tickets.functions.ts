@@ -9,6 +9,7 @@ const submitSchema = z.object({
   locationText: z.string().trim().max(160).optional().default(""),
   description: z.string().trim().min(5, "Please describe the problem").max(2000),
   reporterEmail: z.string().trim().email().max(255).optional().or(z.literal("")),
+  notifyReporter: z.boolean().default(false),
   reporterType: z.enum(["guest", "receptionist", "hotel_manager", "technician"]).default("guest"),
   inputMethod: z.enum(["text", "voice", "image"]).default("text"),
   transcription: z.string().trim().max(4000).optional().or(z.literal("")),
