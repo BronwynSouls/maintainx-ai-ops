@@ -65,6 +65,8 @@ function SettingsPage() {
 
   const profile = account?.profile;
   const roles = account?.roles ?? [];
+  const services = (account as { services?: string[] } | undefined)?.services ?? [];
+  const isTechnician = roles.includes("technician");
 
   return (
     <AppShell title="Settings" description="Update your profile details">
@@ -98,6 +100,29 @@ function SettingsPage() {
               </dl>
             </section>
 
+            {isTechnician && (
+              <section className="surface-panel p-5">
+                <h2 className="text-sm font-semibold">Registered maintenance services</h2>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  These determine the tickets AI can assign to you. Contact your manager to change
+                  them.
+                </p>
+                <ul className="mt-3 flex flex-wrap gap-2">
+                  {services.length === 0 && (
+                    <li className="text-sm text-muted-foreground">No services registered.</li>
+                  )}
+                  {services.map((service) => (
+                    <li
+                      key={service}
+                      className="rounded-full border border-border bg-muted px-3 py-1 text-xs font-medium"
+                    >
+                      {service}
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+
             <form onSubmit={handleSubmit} className="surface-panel space-y-4 p-5" noValidate>
               <h2 className="text-sm font-semibold">Edit profile</h2>
 
@@ -109,7 +134,14 @@ function SettingsPage() {
                   onChange={(e) => setFullName(e.target.value)}
                   maxLength={120}
                   required
+                  disabled={isTechnician}
+                  readOnly={isTechnician}
                 />
+                {isTechnician && (
+                  <p className="text-xs text-muted-foreground">
+                    Your full name is set at account creation and cannot be changed here.
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">

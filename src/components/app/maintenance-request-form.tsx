@@ -60,6 +60,7 @@ export function MaintenanceRequestForm({
   const [locationText, setLocationText] = useState("");
   const [description, setDescription] = useState("");
   const [email, setEmail] = useState("");
+  const [notifyReporter, setNotifyReporter] = useState(false);
   const [imageDataUrl, setImageDataUrl] = useState("");
   const [inputMethod, setInputMethod] = useState<"text" | "voice" | "image">("text");
   const [transcription, setTranscription] = useState("");
@@ -152,6 +153,7 @@ export function MaintenanceRequestForm({
           locationText: locationText.trim(),
           description: description.trim(),
           reporterEmail: email.trim(),
+          notifyReporter: notifyReporter && Boolean(email.trim()),
           reporterType,
           inputMethod,
           transcription,
@@ -370,6 +372,16 @@ export function MaintenanceRequestForm({
             placeholder="you@example.com"
             maxLength={255}
           />
+          <label className="flex items-start gap-2 text-sm text-muted-foreground">
+            <input
+              type="checkbox"
+              className="mt-0.5 size-4 rounded border-border accent-[hsl(var(--primary))]"
+              checked={notifyReporter}
+              onChange={(e) => setNotifyReporter(e.target.checked)}
+              disabled={!email.trim()}
+            />
+            Email me updates when this ticket is assigned, progresses and is resolved.
+          </label>
         </div>
       </div>
 

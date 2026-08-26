@@ -9,6 +9,7 @@ const submitSchema = z.object({
   locationText: z.string().trim().max(160).optional().default(""),
   description: z.string().trim().min(5, "Please describe the problem").max(2000),
   reporterEmail: z.string().trim().email().max(255).optional().or(z.literal("")),
+  notifyReporter: z.boolean().default(false),
   reporterType: z.enum(["guest", "receptionist", "hotel_manager", "technician"]).default("guest"),
   inputMethod: z.enum(["text", "voice", "image"]).default("text"),
   transcription: z.string().trim().max(4000).optional().or(z.literal("")),
@@ -76,6 +77,7 @@ export const submitMaintenanceRequest = createServerFn({ method: "POST" })
         title: data.description.slice(0, 80),
         reporter_type: data.reporterType,
         reporter_email: data.reporterEmail || null,
+        notify_reporter: Boolean(data.notifyReporter && data.reporterEmail),
         input_method: data.inputMethod,
         language: data.language,
         transcription: data.transcription || null,
@@ -232,6 +234,35 @@ export const listTickets = createServerFn({ method: "GET" })
     return data ?? [];
   });
 
+/** Roles + linked technician record for the signed-in user. */
+async function getActorContext(context: { supabase: any; userId: string }) {
+  const { data: roles } = await context.supabase
+    .from("user_roles")
+    .select("role")
+    .eq("user_id", context.userId);
+  const roleList: string[] = (roles ?? []).map((r: { role: string }) => r.role);
+  const isPrivileged = roleList.includes("hotel_manager") || roleList.includes("admin");
+  const isTechnicianOnly = roleList.includes("technician") && !isPrivileged;
+
+  let technicianId: string | null = null;
+  if (roleList.includes("technician")) {
+    const { data: tech } = await context.supabase
+      .from("technicians")
+      .select("id")
+      .eq("profile_id", context.userId)
+      .maybeSingle();
+    technicianId = tech?.id ?? null;
+  }
+
+  return {
+    roles: roleList,
+    isTechnicianOnly,
+    technicianId,
+    /** Only receptionists may assign or reassign tickets manually. */
+    canAssign: roleList.includes("receptionist"),
+  };
+}
+
 export const getTicket = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .validator((input: { id: string }) => ({ id: z.string().uuid().parse(input.id) }))
@@ -243,6 +274,16 @@ export const getTicket = createServerFn({ method: "GET" })
       .maybeSingle();
     if (error) throw new Error(error.message);
     if (!ticket) return { ticket: null, activity: [], imageUrl: null, technicians: [] };
+
+    // Technicians may only open tickets assigned to them.
+    const actor = await getActorContext(context);
+    if (
+      actor.isTechnicianOnly &&
+      (!actor.technicianId || ticket.assigned_technician_id !== actor.technicianId)
+    ) {
+      return { ticket: null, activity: [], statusHistory: [], imageUrl: null, technicians: [] };
+    }
+
 
     const { data: activity } = await context.supabase
       .from("ticket_activity")
@@ -300,10 +341,25 @@ export const updateTicket = createServerFn({ method: "POST" })
     // Fetch current status so we can record status history
     const { data: current } = await context.supabase
       .from("tickets")
-      .select("id, status")
+      .select("id, status, assigned_technician_id")
       .eq("id", data.id)
       .maybeSingle();
     const previousStatus = (current as { status?: TicketStatus } | null)?.status ?? null;
+
+    const actor = await getActorContext(context);
+
+    // Only receptionists may assign or reassign a technician.
+    if (data.technicianId !== undefined && !actor.canAssign) {
+      throw new Error("Only receptionists can assign or reassign tickets.");
+    }
+    // Technicians may only update tickets assigned to them.
+    if (actor.isTechnicianOnly) {
+      const assignedTo = (current as { assigned_technician_id?: string | null } | null)
+        ?.assigned_technician_id;
+      if (!actor.technicianId || assignedTo !== actor.technicianId) {
+        throw new Error("You can only update jobs assigned to you.");
+      }
+    }
 
     const patch: Record<string, unknown> = {};
     if (data.status) {
