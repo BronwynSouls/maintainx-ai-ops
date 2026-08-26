@@ -30,10 +30,8 @@ export async function assignTechnician(input: {
     if (category?.default_service_slug) serviceSlug = category.default_service_slug;
   }
 
-  const allowed =
-    input.priority === "critical" && serviceSlug !== "emergency_maintenance"
-      ? [serviceSlug, "emergency_maintenance"]
-      : [serviceSlug];
+  // A ticket may only go to a technician registered for the matching category.
+  const allowed = [serviceSlug];
 
   const { data: services } = await supabaseAdmin
     .from("maintenance_services")
