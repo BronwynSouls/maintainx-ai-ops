@@ -32,16 +32,6 @@ Classify a reported maintenance issue into exactly one category and suggest a pr
 Categories (use the slug):
 ${CATEGORY_SLUGS.map((s) => `- ${s}: ${CATEGORY_LABELS[s]}`).join("\n")}
 
-Category guidance:
-- plumbing: taps, pipes, toilets, showers, drains, leaks, water supply.
-- electrical: sockets, wiring, lighting, power failures, electrical appliances.
-- hvac: air conditioning, heating, ventilation, thermostats, extractor fans.
-- emergency_maintenance: dangerous or urgent safety issues — fire, gas, flooding, electrocution risk, security or anything that makes the room unsafe.
-- general_maintenance: door handles, doors and door fittings, locks, windows, furniture, cabinets, walls and ceilings, room fixtures, broken non-electrical fittings, and any other hotel maintenance issue that does not clearly belong to the categories above.
-
-Never force an unrelated issue into plumbing, electrical, hvac or emergency_maintenance — use general_maintenance instead.
-Examples: broken door handle → general_maintenance; broken furniture → general_maintenance; damaged cabinet → general_maintenance; AC not working → hvac; leaking tap → plumbing; broken electrical socket → electrical; dangerous or urgent safety issue → emergency_maintenance.
-
 Priority guidance:
 - critical: guest safety, flooding, no power/water, gas, fire, security or anything blocking room use.
 - medium: broken or degraded equipment that affects comfort but the room remains usable.
@@ -49,7 +39,6 @@ Priority guidance:
 
 Respond with strict JSON only:
 {"category":"<slug>","priority":"critical|medium|low","reason":"<one short sentence>","confidence":<0-1>}`;
-
 
 function parseResult(raw: string): ClassificationResult | null {
   const match = raw.match(/\{[\s\S]*\}/);

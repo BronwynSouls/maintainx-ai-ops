@@ -92,9 +92,18 @@ export const ROLE_LABELS: Record<AppRole, string> = {
 export const CATEGORY_SLUGS = [
   "plumbing",
   "electrical",
-  "emergency_maintenance",
   "hvac",
-  "general_maintenance",
+  "appliance",
+  "furniture",
+  "bathroom",
+  "lighting",
+  "doors_locks",
+  "carpentry",
+  "structural",
+  "water_leakage",
+  "cleaning_facilities",
+  "safety",
+  "other",
 ] as const;
 
 export type CategorySlug = (typeof CATEGORY_SLUGS)[number];
@@ -102,11 +111,19 @@ export type CategorySlug = (typeof CATEGORY_SLUGS)[number];
 export const CATEGORY_LABELS: Record<CategorySlug, string> = {
   plumbing: "Plumbing",
   electrical: "Electrical",
-  emergency_maintenance: "Emergency Maintenance",
   hvac: "HVAC / Air Conditioning",
-  general_maintenance: "General Maintenance",
+  appliance: "Appliance",
+  furniture: "Furniture",
+  bathroom: "Bathroom",
+  lighting: "Lighting",
+  doors_locks: "Doors / Locks",
+  carpentry: "Carpentry",
+  structural: "Structural",
+  water_leakage: "Water / Leakage",
+  cleaning_facilities: "Cleaning / Facilities",
+  safety: "Safety",
+  other: "Other",
 };
-
 
 export function formatDate(value: string | null | undefined) {
   if (!value) return "—";
