@@ -73,8 +73,9 @@ function AuthPage() {
   const [role, setRole] = useState<(typeof ROLES)[number]>("hotel_manager");
   const [hotelId, setHotelId] = useState("");
   const [companyId, setCompanyId] = useState("");
-  const [technicianType, setTechnicianType] =
-    useState<(typeof TECHNICIAN_TYPES)[number]["value"] | "">("");
+  const [technicianType, setTechnicianType] = useState<
+    (typeof TECHNICIAN_TYPES)[number]["value"] | ""
+  >("");
   const [serviceIds, setServiceIds] = useState<string[]>([]);
 
   const isTechnician = role === "technician";
@@ -214,7 +215,10 @@ function AuthPage() {
           <h1 className="text-2xl font-bold tracking-tight">Staff access</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Hotel managers, receptionists and technicians only. Guests can{" "}
-            <Link to="/report" className="font-medium text-primary underline-offset-4 hover:underline">
+            <Link
+              to="/report"
+              className="font-medium text-primary underline-offset-4 hover:underline"
+            >
               report an issue without an account
             </Link>
             .
