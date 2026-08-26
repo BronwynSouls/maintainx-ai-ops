@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { getDirectory } from "@/lib/directory.functions";
-import { completeSignup } from "@/lib/account.functions";
+import { completeSignup, provisionAccountFromMetadata } from "@/lib/account.functions";
 import { ROLE_LABELS } from "@/lib/domain";
 
 export const Route = createFileRoute("/auth")({
@@ -53,6 +53,7 @@ function AuthPage() {
   const navigate = useNavigate();
   const loadDirectory = useServerFn(getDirectory);
   const finishSignup = useServerFn(completeSignup);
+  const provisionAccount = useServerFn(provisionAccountFromMetadata);
   const { data: directory } = useQuery({
     queryKey: ["directory"],
     queryFn: () => loadDirectory(),
@@ -72,8 +73,9 @@ function AuthPage() {
   const [role, setRole] = useState<(typeof ROLES)[number]>("hotel_manager");
   const [hotelId, setHotelId] = useState("");
   const [companyId, setCompanyId] = useState("");
-  const [technicianType, setTechnicianType] =
-    useState<(typeof TECHNICIAN_TYPES)[number]["value"] | "">("");
+  const [technicianType, setTechnicianType] = useState<
+    (typeof TECHNICIAN_TYPES)[number]["value"] | ""
+  >("");
   const [serviceIds, setServiceIds] = useState<string[]>([]);
 
   const isTechnician = role === "technician";
@@ -85,10 +87,12 @@ function AuthPage() {
   }
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) navigate({ to: "/dashboard", replace: true });
+    supabase.auth.getSession().then(async ({ data }) => {
+      if (!data.session) return;
+      await provisionAccount();
+      navigate({ to: "/dashboard", replace: true });
     });
-  }, [navigate]);
+  }, [navigate, provisionAccount]);
 
   async function handleLogin(event: React.FormEvent) {
     event.preventDefault();
@@ -98,8 +102,21 @@ function AuthPage() {
       email: loginEmail.trim(),
       password: loginPassword,
     });
+    if (signInError) {
+      setPending(false);
+      return setError(signInError.message);
+    }
+    try {
+      await provisionAccount();
+    } catch (provisionError) {
+      setPending(false);
+      return setError(
+        provisionError instanceof Error
+          ? provisionError.message
+          : "Could not load your staff account.",
+      );
+    }
     setPending(false);
-    if (signInError) return setError(signInError.message);
     navigate({ to: "/dashboard", replace: true });
   }
 
@@ -120,7 +137,17 @@ function AuthPage() {
     const { data, error: signUpError } = await supabase.auth.signUp({
       email: email.trim(),
       password,
-      options: { emailRedirectTo: window.location.origin },
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth`,
+        data: {
+          full_name: fullName.trim(),
+          signup_role: role,
+          hotel_id: needsHotel ? hotelId : null,
+          company_id: needsCompany ? companyId : null,
+          technician_type: isTechnician ? technicianType || null : null,
+          service_ids: isTechnician ? serviceIds : [],
+        },
+      },
     });
 
     if (signUpError) {
@@ -188,7 +215,10 @@ function AuthPage() {
           <h1 className="text-2xl font-bold tracking-tight">Staff access</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Hotel managers, receptionists and technicians only. Guests can{" "}
-            <Link to="/report" className="font-medium text-primary underline-offset-4 hover:underline">
+            <Link
+              to="/report"
+              className="font-medium text-primary underline-offset-4 hover:underline"
+            >
               report an issue without an account
             </Link>
             .

@@ -1,30 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { z } from "zod";
-
-const signupSchema = z
-  .object({
-    fullName: z.string().trim().min(2).max(120),
-    role: z.enum(["hotel_manager", "receptionist", "technician"]),
-    hotelId: z.string().uuid().nullable().optional(),
-    companyId: z.string().uuid().nullable().optional(),
-    technicianType: z.enum(["in_house", "external"]).nullable().optional(),
-    serviceIds: z.array(z.string().uuid()).default([]),
-  })
-  .superRefine((value, ctx) => {
-    if (value.role !== "technician") {
-      if (!value.hotelId) ctx.addIssue({ code: "custom", message: "A hotel must be selected." });
-      return;
-    }
-    if (!value.technicianType)
-      ctx.addIssue({ code: "custom", message: "Select whether you are in-house or outsourced." });
-    if (value.technicianType === "in_house" && !value.hotelId)
-      ctx.addIssue({ code: "custom", message: "In-house technicians must select a hotel." });
-    if (value.technicianType === "external" && !value.companyId)
-      ctx.addIssue({ code: "custom", message: "Outsourced technicians must select a company." });
-    if (value.serviceIds.length === 0)
-      ctx.addIssue({ code: "custom", message: "Select at least one service." });
-  });
+import { signupSchema, updateProfileSchema } from "@/lib/account.server";
 
 /** Creates the profile + role record right after a successful sign-up. */
 export const completeSignup = createServerFn({ method: "POST" })
@@ -87,6 +63,94 @@ export const completeSignup = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+/** Provision account records saved during sign-up after email verification. */
+export const provisionAccountFromMetadata = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const [{ data: profile }, { data: roles }] = await Promise.all([
+      context.supabase.from("profiles").select("id").eq("id", context.userId).maybeSingle(),
+      context.supabase.from("user_roles").select("role").eq("user_id", context.userId),
+    ]);
+    if (profile && (roles?.length ?? 0) > 0) return { ok: true, provisioned: false };
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: userResult, error: userError } = await supabaseAdmin.auth.admin.getUserById(
+      context.userId,
+    );
+    if (userError) throw new Error(userError.message);
+
+    const metadata = (userResult.user?.user_metadata ?? {}) as Record<string, unknown>;
+    const parsed = signupSchema.safeParse({
+      fullName: metadata["full_name"] ?? "",
+      role: metadata["signup_role"] ?? "",
+      hotelId: metadata["hotel_id"] ?? null,
+      companyId: metadata["company_id"] ?? null,
+      technicianType: metadata["technician_type"] ?? null,
+      serviceIds: Array.isArray(metadata["service_ids"]) ? metadata["service_ids"] : [],
+    });
+    if (!parsed.success) return { ok: false, provisioned: false };
+
+    const account = parsed.data;
+    const isTechnician = account.role === "technician";
+    const inHouse = isTechnician && account.technicianType === "in_house";
+    const hotelId = isTechnician
+      ? inHouse
+        ? (account.hotelId ?? null)
+        : null
+      : (account.hotelId ?? null);
+    const companyId = isTechnician && !inHouse ? (account.companyId ?? null) : null;
+
+    const { error: profileError } = await supabaseAdmin.from("profiles").upsert({
+      id: context.userId,
+      full_name: account.fullName,
+      email: userResult.user?.email ?? null,
+      hotel_id: hotelId,
+      company_id: companyId,
+    });
+    if (profileError) throw new Error(profileError.message);
+
+    const { error: roleError } = await supabaseAdmin
+      .from("user_roles")
+      .upsert({ user_id: context.userId, role: account.role }, { onConflict: "user_id,role" });
+    if (roleError) throw new Error(roleError.message);
+
+    if (isTechnician) {
+      const { data: technician, error: technicianError } = await supabaseAdmin
+        .from("technicians")
+        .upsert(
+          {
+            profile_id: context.userId,
+            company_id: companyId,
+            hotel_id: hotelId,
+            technician_type: inHouse ? "in_house" : "external",
+            full_name: account.fullName,
+          },
+          { onConflict: "profile_id" },
+        )
+        .select("id")
+        .maybeSingle();
+      if (technicianError) throw new Error(technicianError.message);
+
+      if (technician && account.serviceIds.length > 0) {
+        const { error: deleteError } = await supabaseAdmin
+          .from("technician_services")
+          .delete()
+          .eq("technician_id", technician.id);
+        if (deleteError) throw new Error(deleteError.message);
+
+        const { error: servicesError } = await supabaseAdmin.from("technician_services").insert(
+          account.serviceIds.map((serviceId) => ({
+            technician_id: technician.id,
+            service_id: serviceId,
+          })),
+        );
+        if (servicesError) throw new Error(servicesError.message);
+      }
+    }
+
+    return { ok: true, provisioned: true };
+  });
+
 /** Current user's profile, role and organisation. */
 export const getMyAccount = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -121,11 +185,6 @@ export const getMyAccount = createServerFn({ method: "GET" })
       services,
     };
   });
-
-const updateProfileSchema = z.object({
-  fullName: z.string().trim().min(2, "Name must be at least 2 characters").max(120),
-  phone: z.string().trim().max(40).optional().or(z.literal("")),
-});
 
 export type UpdateProfileResult = { ok: true } | { ok: false; error: string };
 
