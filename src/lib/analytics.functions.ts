@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { STATUS_META } from "@/lib/domain";
 
 export type AnalyticsPoint = { label: string; value: number };
 
@@ -57,14 +58,10 @@ export const getAnalytics = createServerFn({ method: "GET" })
     const resolved = tickets.filter((t) => t.status === "resolved");
     const open = tickets.filter((t) => t.status !== "resolved");
 
-    const statusLabels: Record<string, string> = {
-      new: "New",
-      assigned: "Assigned",
-      in_progress: "In Progress",
-      pending: "Pending",
-      scheduled: "Scheduled",
-      resolved: "Resolved",
-    };
+    // Single source of truth for status labels across the whole app.
+    const statusLabels: Record<string, string> = Object.fromEntries(
+      Object.entries(STATUS_META).map(([key, meta]) => [key, meta.label]),
+    );
 
     const byCategory = tally(tickets.map((t) => t.maintenance_categories?.name));
     const byStatus = tally(tickets.map((t) => statusLabels[t.status] ?? t.status));

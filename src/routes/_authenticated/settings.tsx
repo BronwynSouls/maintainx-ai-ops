@@ -26,7 +26,8 @@ export const Route = createFileRoute("/_authenticated/settings")({
 });
 
 function SettingsPage() {
-  const { account, isLoading } = useAccount();
+  const { account, isLoading, isTechnician, isManager } = useAccount();
+  const technicianOnly = isTechnician && !isManager;
   const saveProfile = useServerFn(updateMyProfile);
   const queryClient = useQueryClient();
 
@@ -43,8 +44,7 @@ function SettingsPage() {
   }
 
   const mutation = useMutation({
-    mutationFn: () =>
-      saveProfile({ data: { fullName: fullName.trim(), phone: phone.trim() } }),
+    mutationFn: () => saveProfile({ data: { fullName: fullName.trim(), phone: phone.trim() } }),
     onSuccess: (result) => {
       if (result.ok) {
         toast.success("Profile updated");
@@ -82,10 +82,18 @@ function SettingsPage() {
                 </div>
                 <div className="flex justify-between gap-4">
                   <dt className="text-muted-foreground">Role</dt>
-                  <dd className="font-medium">
-                    {roles.map((r) => ROLE_LABELS[r]).join(", ")}
-                  </dd>
+                  <dd className="font-medium">{roles.map((r) => ROLE_LABELS[r]).join(", ")}</dd>
                 </div>
+                {technicianOnly && (
+                  <div className="flex justify-between gap-4">
+                    <dt className="text-muted-foreground">Registered services</dt>
+                    <dd className="text-right font-medium">
+                      {(account?.services ?? []).length > 0
+                        ? (account?.services ?? []).map((s) => s.name).join(", ")
+                        : "—"}
+                    </dd>
+                  </div>
+                )}
                 <div className="flex justify-between gap-4">
                   <dt className="text-muted-foreground">Organisation</dt>
                   <dd className="font-medium">
@@ -109,7 +117,15 @@ function SettingsPage() {
                   onChange={(e) => setFullName(e.target.value)}
                   maxLength={120}
                   required
+                  disabled={technicianOnly}
+                  readOnly={technicianOnly}
                 />
+                {technicianOnly && (
+                  <p className="text-xs text-muted-foreground">
+                    Your name and registered services are set at account creation and cannot be
+                    changed here.
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">

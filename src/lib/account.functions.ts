@@ -34,7 +34,11 @@ export const completeSignup = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const isTechnician = data.role === "technician";
     const inHouse = isTechnician && data.technicianType === "in_house";
-    const hotelId = isTechnician ? (inHouse ? (data.hotelId ?? null) : null) : (data.hotelId ?? null);
+    const hotelId = isTechnician
+      ? inHouse
+        ? (data.hotelId ?? null)
+        : null
+      : (data.hotelId ?? null);
     const companyId = isTechnician && !inHouse ? (data.companyId ?? null) : null;
 
     const { error: profileError } = await supabaseAdmin.from("profiles").upsert({
@@ -87,19 +91,34 @@ export const completeSignup = createServerFn({ method: "POST" })
 export const getMyAccount = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const [{ data: profile }, { data: roles }] = await Promise.all([
+    const [{ data: profile }, { data: roles }, { data: technician }] = await Promise.all([
       context.supabase
         .from("profiles")
-        .select("id, full_name, email, phone, hotel_id, company_id, hotels(name), maintenance_companies(name)")
+        .select(
+          "id, full_name, email, phone, hotel_id, company_id, hotels(name), maintenance_companies(name)",
+        )
         .eq("id", context.userId)
         .maybeSingle(),
       context.supabase.from("user_roles").select("role").eq("user_id", context.userId),
+      context.supabase
+        .from("technicians")
+        .select(
+          "id, technician_type, is_available, technician_services ( maintenance_services ( slug, name ) )",
+        )
+        .eq("profile_id", context.userId)
+        .maybeSingle(),
     ]);
+
+    const services = (technician?.technician_services ?? [])
+      .map((row) => row.maintenance_services)
+      .filter((s): s is { slug: string; name: string } => Boolean(s));
 
     return {
       userId: context.userId,
       profile: profile ?? null,
       roles: (roles ?? []).map((r) => r.role),
+      technician: technician ? { id: technician.id, type: technician.technician_type } : null,
+      services,
     };
   });
 
@@ -115,12 +134,23 @@ export const updateMyProfile = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((input: unknown) => updateProfileSchema.parse(input))
   .handler(async ({ data, context }): Promise<UpdateProfileResult> => {
+    // Technicians cannot rename themselves after account creation.
+    const { data: roleRows } = await context.supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", context.userId);
+    const roles = (roleRows ?? []).map((r) => r.role);
+    const isTechnician =
+      roles.includes("technician") && !roles.includes("hotel_manager") && !roles.includes("admin");
+
+    const patch: { phone: string | null; full_name?: string } = {
+      phone: data.phone || null,
+    };
+    if (!isTechnician) patch.full_name = data.fullName;
+
     const { error } = await context.supabase
       .from("profiles")
-      .update({
-        full_name: data.fullName,
-        phone: data.phone || null,
-      })
+      .update(patch)
       .eq("id", context.userId);
     if (error) return { ok: false, error: error.message };
     return { ok: true };
