@@ -89,7 +89,7 @@ function AuthPage() {
     supabase.auth.getSession().then(async ({ data }) => {
       if (!data.session) return;
       try {
-        await provisionAccount({ data: {} });
+        await provisionAccount();
       } catch {
         /* already provisioned */
       }
@@ -115,7 +115,7 @@ function AuthPage() {
       );
     }
     try {
-      await provisionAccount({ data: {} });
+      await provisionAccount();
     } catch {
       /* profile already exists or metadata missing — dashboard will surface it */
     }
