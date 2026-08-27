@@ -528,7 +528,7 @@ export const updateTicket = createServerFn({ method: "POST" })
       });
     }
 
-    return { ok: true };
+    return { ok: true as const, error: null };
   });
 
 /** Regenerate the AI suggested response for a ticket. */
