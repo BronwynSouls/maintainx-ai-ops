@@ -30,15 +30,12 @@ export async function assignTechnician(input: {
     if (category?.default_service_slug) serviceSlug = category.default_service_slug;
   }
 
-  const allowed =
-    input.priority === "critical" && serviceSlug !== "emergency_maintenance"
-      ? [serviceSlug, "emergency_maintenance"]
-      : [serviceSlug];
-
+  // Strict category matching: only technicians registered for the ticket's
+  // own service are eligible.
   const { data: services } = await supabaseAdmin
     .from("maintenance_services")
     .select("id, slug")
-    .in("slug", allowed);
+    .eq("slug", serviceSlug);
 
   const serviceIds = (services ?? []).map((s) => s.id);
   if (serviceIds.length === 0) return { ok: false, reason: "No matching service is configured." };
@@ -50,7 +47,10 @@ export async function assignTechnician(input: {
 
   const candidateIds = [...new Set((links ?? []).map((l) => l.technician_id))];
   if (candidateIds.length === 0)
-    return { ok: false, reason: `No technician is registered for ${serviceSlug.replace(/_/g, " ")}.` };
+    return {
+      ok: false,
+      reason: `No technician is registered for ${serviceSlug.replace(/_/g, " ")}.`,
+    };
 
   const { data: technicians } = await supabaseAdmin
     .from("technicians")
@@ -65,7 +65,10 @@ export async function assignTechnician(input: {
   const { data: openTickets } = await supabaseAdmin
     .from("tickets")
     .select("assigned_technician_id")
-    .in("assigned_technician_id", pool.map((t) => t.id))
+    .in(
+      "assigned_technician_id",
+      pool.map((t) => t.id),
+    )
     .neq("status", "resolved");
 
   const workload = new Map<string, number>();

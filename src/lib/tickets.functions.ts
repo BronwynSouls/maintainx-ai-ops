@@ -315,11 +315,12 @@ export const getTicket = createServerFn({ method: "GET" })
       .eq("ticket_id", data.id)
       .order("created_at", { ascending: false });
 
-    const { data: technicians } = await context.supabase
-      .from("technicians")
-      .select("id, full_name, specialty")
-      .eq("is_active", true)
-      .order("full_name");
+    // Only technicians registered for the ticket's category may be assigned
+    // (in-house and outsourced alike).
+    const { eligibleTechniciansForCategory } = await import("@/lib/assignment-eligibility.server");
+    const technicians = await eligibleTechniciansForCategory(
+      ticket.maintenance_categories?.id ?? null,
+    );
 
     const { data: statusHistory } = await context.supabase
       .from("ticket_status_history")
@@ -381,10 +382,13 @@ export const updateTicket = createServerFn({ method: "POST" })
     // Fetch current status so we can record status history
     const { data: current } = await context.supabase
       .from("tickets")
-      .select("id, status, assigned_technician_id")
+      .select("id, status, assigned_technician_id, category_id")
       .eq("id", data.id)
       .maybeSingle();
     const previousStatus = (current as { status?: TicketStatus } | null)?.status ?? null;
+    const currentTechnicianId =
+      (current as { assigned_technician_id?: string | null } | null)?.assigned_technician_id ??
+      null;
 
     if (isTechnicianOnly) {
       const { data: me } = await context.supabase
@@ -392,10 +396,45 @@ export const updateTicket = createServerFn({ method: "POST" })
         .select("id")
         .eq("profile_id", context.userId)
         .maybeSingle();
-      const assignedTo = (current as { assigned_technician_id?: string | null } | null)
-        ?.assigned_technician_id;
+      const assignedTo = currentTechnicianId;
       if (!me || !assignedTo || assignedTo !== me.id) {
         throw new Error("You can only update tickets assigned to you.");
+      }
+    }
+
+    // Category-based assignment: a ticket may only go to a technician
+    // registered for the service its category maps to.
+    if (data.technicianId) {
+      const categoryId =
+        data.categoryId !== undefined
+          ? data.categoryId
+          : ((current as { category_id?: string | null } | null)?.category_id ?? null);
+      const { eligibleTechniciansForCategory } =
+        await import("@/lib/assignment-eligibility.server");
+      const eligible = await eligibleTechniciansForCategory(categoryId);
+      if (!eligible.some((t) => t.id === data.technicianId)) {
+        throw new Error("This technician is not registered for the ticket's maintenance category.");
+      }
+    }
+
+    // A technician can only actively work on one ticket at a time.
+    if (data.status === "in_progress") {
+      const technicianId = data.technicianId ?? currentTechnicianId;
+      if (technicianId) {
+        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+        const { data: busy } = await supabaseAdmin
+          .from("tickets")
+          .select("ticket_number")
+          .eq("assigned_technician_id", technicianId)
+          .eq("status", "in_progress")
+          .neq("id", data.id)
+          .limit(1)
+          .maybeSingle();
+        if (busy) {
+          throw new Error(
+            `This technician is already working on ticket ${busy.ticket_number}. Complete or resolve it before starting another job.`,
+          );
+        }
       }
     }
 
