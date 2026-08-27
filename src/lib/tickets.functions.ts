@@ -431,9 +431,11 @@ export const updateTicket = createServerFn({ method: "POST" })
           .limit(1)
           .maybeSingle();
         if (busy) {
-          throw new Error(
-            `This technician is already working on ticket ${busy.ticket_number}. Complete or resolve it before starting another job.`,
-          );
+          // Business rule, not a crash: return it so the UI can show a toast.
+          return {
+            ok: false as const,
+            error: `This technician is already working on ticket ${busy.ticket_number}. Complete or resolve it before starting another job.`,
+          };
         }
       }
     }
