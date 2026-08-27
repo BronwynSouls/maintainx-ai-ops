@@ -88,22 +88,13 @@ export const ROLE_LABELS: Record<AppRole, string> = {
   admin: "Administrator",
 };
 
-/** Category slugs must match the maintenance_categories table. */
+/** Category slugs must match the maintenance_categories table — exactly these five. */
 export const CATEGORY_SLUGS = [
   "plumbing",
   "electrical",
+  "emergency_maintenance",
   "hvac",
-  "appliance",
-  "furniture",
-  "bathroom",
-  "lighting",
-  "doors_locks",
-  "carpentry",
-  "structural",
-  "water_leakage",
-  "cleaning_facilities",
-  "safety",
-  "other",
+  "general_maintenance",
 ] as const;
 
 export type CategorySlug = (typeof CATEGORY_SLUGS)[number];
@@ -111,18 +102,9 @@ export type CategorySlug = (typeof CATEGORY_SLUGS)[number];
 export const CATEGORY_LABELS: Record<CategorySlug, string> = {
   plumbing: "Plumbing",
   electrical: "Electrical",
+  emergency_maintenance: "Emergency Maintenance",
   hvac: "HVAC / Air Conditioning",
-  appliance: "Appliance",
-  furniture: "Furniture",
-  bathroom: "Bathroom",
-  lighting: "Lighting",
-  doors_locks: "Doors / Locks",
-  carpentry: "Carpentry",
-  structural: "Structural",
-  water_leakage: "Water / Leakage",
-  cleaning_facilities: "Cleaning / Facilities",
-  safety: "Safety",
-  other: "Other",
+  general_maintenance: "General Maintenance",
 };
 
 export function formatDate(value: string | null | undefined) {
