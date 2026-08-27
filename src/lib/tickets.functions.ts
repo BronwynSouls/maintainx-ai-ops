@@ -315,11 +315,12 @@ export const getTicket = createServerFn({ method: "GET" })
       .eq("ticket_id", data.id)
       .order("created_at", { ascending: false });
 
-    const { data: technicians } = await context.supabase
-      .from("technicians")
-      .select("id, full_name, specialty")
-      .eq("is_active", true)
-      .order("full_name");
+    // Only technicians registered for the ticket's category may be assigned
+    // (in-house and outsourced alike).
+    const { eligibleTechniciansForCategory } = await import("@/lib/assignment-eligibility.server");
+    const technicians = await eligibleTechniciansForCategory(
+      ticket.maintenance_categories?.id ?? null,
+    );
 
     const { data: statusHistory } = await context.supabase
       .from("ticket_status_history")
