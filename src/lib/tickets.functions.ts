@@ -387,7 +387,8 @@ export const updateTicket = createServerFn({ method: "POST" })
       .maybeSingle();
     const previousStatus = (current as { status?: TicketStatus } | null)?.status ?? null;
     const currentTechnicianId =
-      (current as { assigned_technician_id?: string | null } | null)?.assigned_technician_id ?? null;
+      (current as { assigned_technician_id?: string | null } | null)?.assigned_technician_id ??
+      null;
 
     if (isTechnicianOnly) {
       const { data: me } = await context.supabase
@@ -408,14 +409,11 @@ export const updateTicket = createServerFn({ method: "POST" })
         data.categoryId !== undefined
           ? data.categoryId
           : ((current as { category_id?: string | null } | null)?.category_id ?? null);
-      const { eligibleTechniciansForCategory } = await import(
-        "@/lib/assignment-eligibility.server"
-      );
+      const { eligibleTechniciansForCategory } =
+        await import("@/lib/assignment-eligibility.server");
       const eligible = await eligibleTechniciansForCategory(categoryId);
       if (!eligible.some((t) => t.id === data.technicianId)) {
-        throw new Error(
-          "This technician is not registered for the ticket's maintenance category.",
-        );
+        throw new Error("This technician is not registered for the ticket's maintenance category.");
       }
     }
 
@@ -439,7 +437,6 @@ export const updateTicket = createServerFn({ method: "POST" })
         }
       }
     }
-
 
     const patch: Record<string, unknown> = {};
     if (data.status) {

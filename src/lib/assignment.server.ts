@@ -47,7 +47,10 @@ export async function assignTechnician(input: {
 
   const candidateIds = [...new Set((links ?? []).map((l) => l.technician_id))];
   if (candidateIds.length === 0)
-    return { ok: false, reason: `No technician is registered for ${serviceSlug.replace(/_/g, " ")}.` };
+    return {
+      ok: false,
+      reason: `No technician is registered for ${serviceSlug.replace(/_/g, " ")}.`,
+    };
 
   const { data: technicians } = await supabaseAdmin
     .from("technicians")
@@ -62,7 +65,10 @@ export async function assignTechnician(input: {
   const { data: openTickets } = await supabaseAdmin
     .from("tickets")
     .select("assigned_technician_id")
-    .in("assigned_technician_id", pool.map((t) => t.id))
+    .in(
+      "assigned_technician_id",
+      pool.map((t) => t.id),
+    )
     .neq("status", "resolved");
 
   const workload = new Map<string, number>();
