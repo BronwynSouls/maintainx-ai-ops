@@ -37,7 +37,11 @@ function AiPage() {
   const mutation = useMutation({
     mutationFn: (input: { id: string; status: TicketStatus }) =>
       saveTicket({ data: { id: input.id, status: input.status } }),
-    onSuccess: () => {
+    onSuccess: (result) => {
+      if (result && result.ok === false) {
+        toast.error(result.error);
+        return;
+      }
       toast.success("Ticket updated");
       queryClient.invalidateQueries({ queryKey: ["ai-tickets"] });
       queryClient.invalidateQueries({ queryKey: ["tickets"] });

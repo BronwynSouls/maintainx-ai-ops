@@ -64,7 +64,11 @@ function TicketDetail() {
       priority?: TicketPriority;
       technicianId?: string | null;
     }) => saveTicket({ data: { id: ticketId, ...patch } }),
-    onSuccess: () => {
+    onSuccess: (result) => {
+      if (result && result.ok === false) {
+        toast.error(result.error);
+        return;
+      }
       toast.success("Ticket updated");
       queryClient.invalidateQueries({ queryKey: ["ticket", ticketId] });
       queryClient.invalidateQueries({ queryKey: ["tickets"] });

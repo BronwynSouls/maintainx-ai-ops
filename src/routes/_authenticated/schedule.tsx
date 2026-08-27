@@ -38,7 +38,11 @@ function SchedulePage() {
   const mutation = useMutation({
     mutationFn: (input: { id: string; status: TicketStatus }) =>
       saveTicket({ data: { id: input.id, status: input.status } }),
-    onSuccess: () => {
+    onSuccess: (result) => {
+      if (result && result.ok === false) {
+        toast.error(result.error);
+        return;
+      }
       toast.success("Job updated");
       queryClient.invalidateQueries({ queryKey: ["my-schedule"] });
       queryClient.invalidateQueries({ queryKey: ["tickets"] });
