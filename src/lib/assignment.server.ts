@@ -30,15 +30,12 @@ export async function assignTechnician(input: {
     if (category?.default_service_slug) serviceSlug = category.default_service_slug;
   }
 
-  const allowed =
-    input.priority === "critical" && serviceSlug !== "emergency_maintenance"
-      ? [serviceSlug, "emergency_maintenance"]
-      : [serviceSlug];
-
+  // Strict category matching: only technicians registered for the ticket's
+  // own service are eligible.
   const { data: services } = await supabaseAdmin
     .from("maintenance_services")
     .select("id, slug")
-    .in("slug", allowed);
+    .eq("slug", serviceSlug);
 
   const serviceIds = (services ?? []).map((s) => s.id);
   if (serviceIds.length === 0) return { ok: false, reason: "No matching service is configured." };
