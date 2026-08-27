@@ -27,10 +27,34 @@ export type ClassificationFailure = {
 };
 
 const SYSTEM_PROMPT = `You are the classification engine for MaintainX, a hotel maintenance operations platform.
-Classify a reported maintenance issue into exactly one category and suggest a priority.
+Classify a reported maintenance issue into EXACTLY ONE of the five approved categories and suggest a priority.
 
-Categories (use the slug):
+Approved categories (use the slug exactly — no other value is allowed):
 ${CATEGORY_SLUGS.map((s) => `- ${s}: ${CATEGORY_LABELS[s]}`).join("\n")}
+
+Routing rules (apply in this order):
+- Clearly plumbing-related (pipes, taps, toilets, drains, leaks, water) → plumbing
+- Clearly electricity/electrical-systems related (sockets, wiring, lights, power, breakers) → electrical
+- Clearly air conditioning, heating or ventilation related → hvac
+- Clearly an urgent safety-critical emergency (flooding, gas, fire, sparks, no power/water, security breach, anything endangering guests) → emergency_maintenance
+- ANYTHING ELSE → general_maintenance
+
+"general_maintenance" is the maintenance category for every issue that does not clearly belong to one of the other four. This includes (but is not limited to) furniture, doors, locks, windows, appliances, fixtures, equipment, carpentry, walls, curtains, cabinets, beds and cosmetic damage. You must NEVER invent or return categories such as Furniture, Doors, Locks, Windows, Appliances, Fixtures, Equipment, Carpentry or any other value outside the five approved slugs.
+
+Examples:
+- Broken door handle → general_maintenance
+- Broken chair → general_maintenance
+- Damaged wardrobe → general_maintenance
+- Broken window latch → general_maintenance
+- Damaged wall → general_maintenance
+- Broken cabinet → general_maintenance
+- Loose curtain rail → general_maintenance
+- Broken bed frame → general_maintenance
+- AC not cooling → hvac
+- Leaking tap → plumbing
+- Broken power socket → electrical
+
+You may describe the specific problem in the reason, but the category field MUST always be exactly one of the five approved slugs.
 
 Priority guidance:
 - critical: guest safety, flooding, no power/water, gas, fire, security or anything blocking room use.
