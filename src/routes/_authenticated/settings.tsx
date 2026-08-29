@@ -31,20 +31,21 @@ function SettingsPage() {
   const saveProfile = useServerFn(updateMyProfile);
   const queryClient = useQueryClient();
 
-  const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [initialized, setInitialized] = useState(false);
 
   // Initialise form fields once the account loads
   if (!initialized && account?.profile) {
-    setFullName(account.profile.full_name ?? "");
     setPhone(account.profile.phone ?? "");
     setInitialized(true);
   }
 
   const mutation = useMutation({
-    mutationFn: () => saveProfile({ data: { fullName: fullName.trim(), phone: phone.trim() } }),
+    mutationFn: () =>
+      saveProfile({
+        data: { fullName: (account?.profile?.full_name ?? "").trim(), phone: phone.trim() },
+      }),
     onSuccess: (result) => {
       if (result.ok) {
         toast.success("Profile updated");
@@ -59,7 +60,6 @@ function SettingsPage() {
   function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     setError(null);
-    if (fullName.trim().length < 2) return setError("Name must be at least 2 characters.");
     mutation.mutate();
   }
 
@@ -111,21 +111,10 @@ function SettingsPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="full-name">Full name</Label>
-                <Input
-                  id="full-name"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  maxLength={120}
-                  required
-                  disabled={technicianOnly}
-                  readOnly={technicianOnly}
-                />
-                {technicianOnly && (
-                  <p className="text-xs text-muted-foreground">
-                    Your name and registered services are set at account creation and cannot be
-                    changed here.
-                  </p>
-                )}
+                <Input id="full-name" value={profile.full_name ?? ""} disabled readOnly />
+                <p className="text-xs text-muted-foreground">
+                  Your name is set at account creation and cannot be changed here.
+                </p>
               </div>
 
               <div className="space-y-2">

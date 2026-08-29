@@ -142,7 +142,7 @@ function SchedulePage() {
                 <li className="p-5 text-sm text-muted-foreground">Nothing completed yet.</li>
               )}
               {done.slice(0, 15).map((ticket) => (
-                <li key={ticket.id} className="flex items-center justify-between px-5 py-3">
+                <li key={ticket.id} className="flex flex-wrap items-center justify-between gap-2 px-5 py-3">
                   <div className="min-w-0">
                     <Link
                       to="/tickets/$ticketId"

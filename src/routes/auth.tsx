@@ -196,7 +196,7 @@ function AuthPage() {
       </div>
 
       <div className="flex flex-col">
-        <div className="flex items-center justify-between gap-2 p-4">
+        <div className="flex flex-wrap items-center justify-between gap-2 p-4">
           <Link to="/" className="lg:hidden">
             <Brand />
           </Link>

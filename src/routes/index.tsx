@@ -46,7 +46,7 @@ const FEATURES = [
 function Landing() {
   return (
     <div className="min-h-screen bg-background">
-      <header className="mx-auto flex max-w-6xl items-center justify-between px-4 py-5 sm:px-6">
+      <header className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-5 sm:px-6">
         <Brand />
         <div className="flex items-center gap-2">
           <ThemeToggle />

@@ -59,7 +59,7 @@ function AiPage() {
 
   return (
     <AppShell title="AI" description={subtitle}>
-      <div className="surface-panel mb-5 flex items-center gap-3 p-5">
+      <div className="surface-panel mb-5 flex flex-wrap items-center gap-3 p-5">
         <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10">
           <Bot className="size-5 text-primary" aria-hidden />
         </div>
@@ -167,7 +167,7 @@ function AiPage() {
               </header>
               <div className="divide-y divide-border">
                 {unclassified.map((ticket) => (
-                  <div key={ticket.id} className="flex items-center justify-between px-5 py-3">
+                  <div key={ticket.id} className="flex flex-wrap items-center justify-between gap-2 px-5 py-3">
                     <div className="min-w-0">
                       <Link
                         to="/tickets/$ticketId"
