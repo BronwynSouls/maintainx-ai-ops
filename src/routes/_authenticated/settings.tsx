@@ -44,7 +44,10 @@ function SettingsPage() {
   }
 
   const mutation = useMutation({
-    mutationFn: () => saveProfile({ data: { fullName: fullName.trim(), phone: phone.trim() } }),
+    mutationFn: () =>
+      saveProfile({
+        data: { fullName: (account?.profile?.full_name ?? fullName).trim(), phone: phone.trim() },
+      }),
     onSuccess: (result) => {
       if (result.ok) {
         toast.success("Profile updated");
