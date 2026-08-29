@@ -29,7 +29,7 @@ function GuestReport() {
   return (
     <div className="min-h-screen bg-muted/40">
       <header className="border-b border-border bg-background">
-        <div className="mx-auto flex max-w-2xl items-center justify-between px-4 py-4">
+        <div className="mx-auto flex max-w-2xl flex-wrap items-center justify-between gap-3 px-4 py-4">
           <Link to="/">
             <Brand />
           </Link>
