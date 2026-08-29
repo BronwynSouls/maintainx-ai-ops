@@ -114,21 +114,10 @@ function SettingsPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="full-name">Full name</Label>
-                <Input
-                  id="full-name"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  maxLength={120}
-                  required
-                  disabled={technicianOnly}
-                  readOnly={technicianOnly}
-                />
-                {technicianOnly && (
-                  <p className="text-xs text-muted-foreground">
-                    Your name and registered services are set at account creation and cannot be
-                    changed here.
-                  </p>
-                )}
+                <Input id="full-name" value={profile.full_name ?? ""} disabled readOnly />
+                <p className="text-xs text-muted-foreground">
+                  Your name is set at account creation and cannot be changed here.
+                </p>
               </div>
 
               <div className="space-y-2">
