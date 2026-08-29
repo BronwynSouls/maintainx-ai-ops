@@ -31,14 +31,12 @@ function SettingsPage() {
   const saveProfile = useServerFn(updateMyProfile);
   const queryClient = useQueryClient();
 
-  const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [initialized, setInitialized] = useState(false);
 
   // Initialise form fields once the account loads
   if (!initialized && account?.profile) {
-    setFullName(account.profile.full_name ?? "");
     setPhone(account.profile.phone ?? "");
     setInitialized(true);
   }
@@ -46,7 +44,7 @@ function SettingsPage() {
   const mutation = useMutation({
     mutationFn: () =>
       saveProfile({
-        data: { fullName: (account?.profile?.full_name ?? fullName).trim(), phone: phone.trim() },
+        data: { fullName: (account?.profile?.full_name ?? "").trim(), phone: phone.trim() },
       }),
     onSuccess: (result) => {
       if (result.ok) {
