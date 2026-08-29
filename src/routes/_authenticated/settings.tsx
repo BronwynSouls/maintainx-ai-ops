@@ -60,7 +60,6 @@ function SettingsPage() {
   function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     setError(null);
-    if (fullName.trim().length < 2) return setError("Name must be at least 2 characters.");
     mutation.mutate();
   }
 
