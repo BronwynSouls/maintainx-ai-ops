@@ -44,6 +44,8 @@
   --color-navy-foreground: var(--navy-foreground);
   --color-azure: var(--azure);
   --color-azure-foreground: var(--azure-foreground);
+  --color-gold: var(--gold);
+  --color-gold-foreground: var(--gold-foreground);
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
   --color-chart-3: var(--chart-3);
@@ -101,6 +103,8 @@
   /* Pastel Azure #A4D8EF */
   --azure: oklch(0.855 0.062 226);
   --azure-foreground: oklch(0.201 0.043 267);
+  --gold: oklch(0.78 0.12 85);
+  --gold-foreground: oklch(0.22 0.06 80);
 
   --secondary: oklch(0.95 0.012 245);
   --secondary-foreground: oklch(0.24 0.045 262);
@@ -166,6 +170,8 @@
   --navy-foreground: oklch(0.95 0.012 240);
   --azure: oklch(0.79 0.075 226);
   --azure-foreground: oklch(0.17 0.04 267);
+  --gold: oklch(0.8 0.115 85);
+  --gold-foreground: oklch(0.22 0.06 80);
 
   --secondary: oklch(0.27 0.04 265);
   --secondary-foreground: oklch(0.95 0.012 240);
@@ -238,4 +244,18 @@
   background:
     radial-gradient(90rem 40rem at 15% -10%, color-mix(in oklab, var(--color-azure) 45%, transparent), transparent 60%),
     linear-gradient(160deg, var(--color-navy), color-mix(in oklab, var(--color-navy) 70%, black));
+}
+
+/* Keep poster band colours when printing */
+@media print {
+  body {
+    background: #fff;
+  }
+  .bg-navy,
+  .bg-primary,
+  .bg-muted\/60,
+  .bg-accent {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
 }

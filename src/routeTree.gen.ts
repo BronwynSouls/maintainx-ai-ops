@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
+import { Route as QrPosterRouteImport } from './routes/qr-poster'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as AuthenticatedAiRouteImport } from './routes/_authenticated/ai'
 import { Route as AuthenticatedAssetsRouteImport } from './routes/_authenticated/assets'
@@ -44,6 +45,11 @@ const AuthRoute = AuthRouteImport.update({
 const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
   id: '/forgot-password',
   path: '/forgot-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const QrPosterRoute = QrPosterRouteImport.update({
+  id: '/qr-poster',
+  path: '/qr-poster',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
@@ -119,6 +125,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/forgot-password': typeof ForgotPasswordRoute
+  '/qr-poster': typeof QrPosterRoute
   '/reset-password': typeof ResetPasswordRoute
   '/ai': typeof AuthenticatedAiRoute
   '/assets': typeof AuthenticatedAssetsRoute
@@ -137,6 +144,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/forgot-password': typeof ForgotPasswordRoute
+  '/qr-poster': typeof QrPosterRoute
   '/reset-password': typeof ResetPasswordRoute
   '/ai': typeof AuthenticatedAiRoute
   '/assets': typeof AuthenticatedAssetsRoute
@@ -157,6 +165,7 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/forgot-password': typeof ForgotPasswordRoute
+  '/qr-poster': typeof QrPosterRoute
   '/reset-password': typeof ResetPasswordRoute
   '/_authenticated/ai': typeof AuthenticatedAiRoute
   '/_authenticated/assets': typeof AuthenticatedAssetsRoute
@@ -177,6 +186,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/forgot-password'
+    | '/qr-poster'
     | '/reset-password'
     | '/ai'
     | '/assets'
@@ -195,6 +205,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/forgot-password'
+    | '/qr-poster'
     | '/reset-password'
     | '/ai'
     | '/assets'
@@ -214,6 +225,7 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/auth'
     | '/forgot-password'
+    | '/qr-poster'
     | '/reset-password'
     | '/_authenticated/ai'
     | '/_authenticated/assets'
@@ -234,6 +246,7 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
+  QrPosterRoute: typeof QrPosterRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   ReportCodeRoute: typeof ReportCodeRoute
   ReportIndexRoute: typeof ReportIndexRoute
@@ -267,6 +280,13 @@ declare module '@tanstack/react-router' {
       path: '/forgot-password'
       fullPath: '/forgot-password'
       preLoaderRoute: typeof ForgotPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/qr-poster': {
+      id: '/qr-poster'
+      path: '/qr-poster'
+      fullPath: '/qr-poster'
+      preLoaderRoute: typeof QrPosterRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/reset-password': {
@@ -397,6 +417,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,
+  QrPosterRoute: QrPosterRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   ReportCodeRoute: ReportCodeRoute,
   ReportIndexRoute: ReportIndexRoute,
