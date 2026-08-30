@@ -245,3 +245,17 @@
     radial-gradient(90rem 40rem at 15% -10%, color-mix(in oklab, var(--color-azure) 45%, transparent), transparent 60%),
     linear-gradient(160deg, var(--color-navy), color-mix(in oklab, var(--color-navy) 70%, black));
 }
+
+/* Keep poster band colours when printing */
+@media print {
+  body {
+    background: #fff;
+  }
+  .bg-navy,
+  .bg-primary,
+  .bg-muted\/60,
+  .bg-accent {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+}
