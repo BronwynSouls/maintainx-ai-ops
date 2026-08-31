@@ -251,11 +251,6 @@ export function MaintenanceRequestForm({
           >
             Report another issue
           </Button>
-          <Button asChild variant="secondary">
-            <Link to="/">
-              <ArrowLeft className="size-4" aria-hidden /> Back to Home
-            </Link>
-          </Button>
         </div>
       </div>
     );

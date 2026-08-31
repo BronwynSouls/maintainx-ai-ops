@@ -43,15 +43,8 @@ function QrReport() {
     <div className="min-h-screen bg-muted/40">
       <header className="border-b border-border bg-background">
         <div className="mx-auto flex max-w-2xl flex-wrap items-center justify-between gap-3 px-4 py-4">
-          <Link to="/">
-            <Brand />
-          </Link>
+          <Brand />
           <div className="flex items-center gap-2">
-            <Button asChild variant="outline" size="sm">
-              <Link to="/">
-                <ArrowLeft className="size-4" aria-hidden /> Back to Home
-              </Link>
-            </Button>
             <ThemeToggle />
           </div>
         </div>
