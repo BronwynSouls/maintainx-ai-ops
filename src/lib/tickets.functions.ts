@@ -27,6 +27,9 @@ export type SubmitResult = {
   ai:
     | { ok: true; categoryName: string; priority: string; reason: string }
     | { ok: false; error: string };
+  guidance:
+    | { ok: true; guidance: string; danger: boolean }
+    | { ok: false; error: string };
 };
 
 /**
