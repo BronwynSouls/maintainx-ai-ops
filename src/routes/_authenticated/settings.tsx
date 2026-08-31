@@ -106,6 +106,10 @@ function SettingsPage() {
               </dl>
             </section>
 
+            {isManager && <EmailConfigPanel />}
+
+
+
             <form onSubmit={handleSubmit} className="surface-panel space-y-4 p-5" noValidate>
               <h2 className="text-sm font-semibold">Edit profile</h2>
 
