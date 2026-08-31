@@ -169,3 +169,60 @@ export async function notifyGuest(input: {
 
   await sendAppEmail({ to: ticket.reporter_email, subject, body });
 }
+
+/**
+ * Technician alert when a ticket is assigned to them.
+ * Additive: reuses the existing dedupe claim so no event sends twice.
+ */
+export async function notifyTechnicianOfAssignment(input: { ticketId: string }) {
+  const ticket = await ticketSummary(input.ticketId);
+  if (!ticket) return;
+
+  const db = await admin();
+  const { data: assignedTicket } = await db
+    .from("tickets")
+    .select("assigned_technician_id")
+    .eq("id", input.ticketId)
+    .maybeSingle();
+  const technicianId = assignedTicket?.assigned_technician_id;
+  if (!technicianId) return;
+
+  const { data: technician } = await db
+    .from("technicians")
+    .select("full_name, profile_id")
+    .eq("id", technicianId)
+    .maybeSingle();
+  if (!technician?.profile_id) return;
+
+  const { data: profile } = await db
+    .from("profiles")
+    .select("email")
+    .eq("id", technician.profile_id)
+    .maybeSingle();
+  const to = profile?.email;
+  if (!to) return;
+
+  const subject = `New job assigned: ${ticket.ticket_number}`;
+  const body = [
+    `Hello ${technician.full_name ?? "there"},`,
+    "",
+    `A maintenance ticket has been assigned to you.`,
+    `Ticket: ${ticket.ticket_number}`,
+    `Title: ${ticket.title ?? "—"}`,
+    `Property: ${ticket.hotels?.name ?? "—"}`,
+    `Location: ${ticket.hotel_locations?.name ?? ticket.location_text ?? "—"}`,
+    `Category: ${ticket.maintenance_categories?.name ?? "Unclassified"}`,
+    `Priority: ${ticket.priority}`,
+    `Status: ${statusLabel(ticket.status)}`,
+  ].join("\n");
+
+  const fresh = await claim(
+    input.ticketId,
+    `technician:assigned:${technicianId}`,
+    "Technician notified of assignment.",
+    [to],
+  );
+  if (!fresh) return;
+
+  await sendAppEmail({ to, subject, body });
+}
