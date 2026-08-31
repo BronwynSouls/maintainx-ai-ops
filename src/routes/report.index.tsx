@@ -1,8 +1,6 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowLeft } from "lucide-react";
+import { createFileRoute } from "@tanstack/react-router";
 import { Brand } from "@/components/app/brand";
 import { ThemeToggle } from "@/components/app/theme-toggle";
-import { Button } from "@/components/ui/button";
 import { MaintenanceRequestForm } from "@/components/app/maintenance-request-form";
 import { t } from "@/lib/i18n";
 
@@ -30,15 +28,8 @@ function GuestReport() {
     <div className="min-h-screen bg-muted/40">
       <header className="border-b border-border bg-background">
         <div className="mx-auto flex max-w-2xl flex-wrap items-center justify-between gap-3 px-4 py-4">
-          <Link to="/">
-            <Brand />
-          </Link>
+          <Brand />
           <div className="flex items-center gap-2">
-            <Button asChild variant="outline" size="sm">
-              <Link to="/">
-                <ArrowLeft className="size-4" aria-hidden /> Back to Home
-              </Link>
-            </Button>
             <ThemeToggle />
           </div>
         </div>

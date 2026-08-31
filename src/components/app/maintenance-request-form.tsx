@@ -1,9 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
-  ArrowLeft,
   CheckCircle2,
   ImagePlus,
   Loader2,
@@ -250,11 +248,6 @@ export function MaintenanceRequestForm({
             }}
           >
             Report another issue
-          </Button>
-          <Button asChild variant="secondary">
-            <Link to="/">
-              <ArrowLeft className="size-4" aria-hidden /> Back to Home
-            </Link>
           </Button>
         </div>
       </div>
