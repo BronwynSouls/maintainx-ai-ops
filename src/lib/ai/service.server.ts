@@ -202,12 +202,84 @@ export async function generateTicketResponse(input: {
 }
 
 /* ------------------------------------------------------------------
+ * Immediate guest safety guidance (shown on the confirmation screen).
+ * ------------------------------------------------------------------ */
+const GUIDANCE_PROMPT = `You provide brief, situation-specific, low-risk safety guidance for hotel guests who have just reported a maintenance issue and are waiting for the maintenance team.
+
+Strict safety rules:
+- NEVER instruct the guest to perform repairs, open equipment, touch wiring, or handle electrical, gas, fire, water-damage or any other dangerous situation.
+- Only suggest simple, zero-risk actions (e.g. "stop using the tap", "keep the area clear", "avoid the wet floor").
+- For anything potentially dangerous (electrical faults, sparks, gas smell, flooding, smoke, structural damage, security issues), the ONLY advice is to keep a safe distance and contact Reception immediately.
+- 1-3 short sentences, plain text, no markdown, no greetings, calm and reassuring tone.
+
+Example — leaking tap:
+"Please stop using the tap for now. If it is safe and easy to reach, you may gently close it to reduce further leaking. Our maintenance team has been notified."
+
+Respond with strict JSON only:
+{"guidance":"<the guidance text>","danger":true|false}`;
+
+export async function generateImmediateGuidance(input: {
+  description: string;
+  category?: string | null;
+  priority?: string | null;
+  location?: string | null;
+}): Promise<{ ok: true; guidance: string; danger: boolean } | { ok: false; error: string }> {
+  const apiKey = process.env["LOVABLE_API_KEY"];
+  if (!apiKey) return { ok: false, error: "AI service is not configured." };
+
+  const userContent = [
+    `Reported issue: ${input.description}`,
+    input.location ? `Location: ${input.location}` : null,
+    input.category ? `Category: ${input.category}` : null,
+    input.priority ? `Priority: ${input.priority}` : null,
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  try {
+    const response = await fetch(GATEWAY_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+      body: JSON.stringify({
+        model: AI_MODEL,
+        messages: [
+          { role: "system", content: GUIDANCE_PROMPT },
+          { role: "user", content: userContent },
+        ],
+      }),
+    });
+
+    if (!response.ok) {
+      if (response.status === 429) return { ok: false, error: "AI rate limit reached." };
+      if (response.status === 402) return { ok: false, error: "AI credits exhausted." };
+      return { ok: false, error: `AI request failed (${response.status}).` };
+    }
+
+    const payload = (await response.json()) as { choices?: { message?: { content?: string } }[] };
+    const content = payload.choices?.[0]?.message?.content ?? "";
+    const match = content.match(/\{[\s\S]*\}/);
+    if (!match) return { ok: false, error: "AI returned unreadable guidance." };
+    try {
+      const parsed = JSON.parse(match[0]) as Record<string, unknown>;
+      const guidance = String(parsed["guidance"] ?? "").trim().slice(0, 600);
+      if (!guidance) return { ok: false, error: "AI returned empty guidance." };
+      return { ok: true, guidance, danger: parsed["danger"] === true };
+    } catch {
+      return { ok: false, error: "AI returned unreadable guidance." };
+    }
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : "Unknown AI failure." };
+  }
+}
+
+/* ------------------------------------------------------------------
  * Sprint 3+ extension points. Intentionally not implemented yet.
  * ------------------------------------------------------------------ */
 export const aiCapabilities = {
   classification: true,
   suggestedResponses: true,
   autoAssignment: true,
+  immediateGuidance: true,
   imageAnalysis: false,
   voiceTranscription: false,
   workflowAutomation: false,
