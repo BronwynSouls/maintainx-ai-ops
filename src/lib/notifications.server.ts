@@ -181,10 +181,10 @@ export async function notifyTechnicianOfAssignment(input: { ticketId: string }) 
   const db = await admin();
   const { data: assignedTicket } = await db
     .from("tickets")
-    .select("technician_id")
+    .select("assigned_technician_id")
     .eq("id", input.ticketId)
     .maybeSingle();
-  const technicianId = assignedTicket?.technician_id;
+  const technicianId = assignedTicket?.assigned_technician_id;
   if (!technicianId) return;
 
   const { data: technician } = await db
