@@ -527,7 +527,8 @@ export const updateTicket = createServerFn({ method: "POST" })
     }
 
     // --- Notifications ---
-    const { notifyGuest, notifyReceptionistsOfAssignment } = await import("./notifications.server");
+    const { notifyGuest, notifyReceptionistsOfAssignment, notifyTechnicianOfAssignment } =
+      await import("./notifications.server");
     if (data.technicianId) {
       const { data: tech } = await context.supabase
         .from("technicians")
@@ -539,6 +540,7 @@ export const updateTicket = createServerFn({ method: "POST" })
         assigned: true,
         technicianName: tech?.full_name ?? null,
       });
+      await notifyTechnicianOfAssignment({ ticketId: data.id });
       await notifyGuest({ ticketId: data.id, event: "assigned", status: "assigned" });
     }
     if (data.status && newStatus && newStatus !== previousStatus) {
