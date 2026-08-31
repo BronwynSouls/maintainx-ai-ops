@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Loader as Loader2, Save } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/app/app-shell";
+import { EmailConfigPanel } from "@/components/app/email-config-panel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
