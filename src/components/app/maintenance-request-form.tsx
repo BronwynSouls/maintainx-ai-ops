@@ -7,6 +7,7 @@ import {
   Loader2,
   Mic,
   MicOff,
+  ShieldAlert,
   Sparkles,
   X,
 } from "lucide-react";
