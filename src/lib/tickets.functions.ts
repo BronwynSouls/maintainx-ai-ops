@@ -192,6 +192,15 @@ export const submitMaintenanceRequest = createServerFn({ method: "POST" })
           .eq("id", ticket.id);
       }
 
+      // --- Immediate guest guidance (best effort) ---
+      const { generateImmediateGuidance } = await import("./ai/service.server");
+      const guidance = await generateImmediateGuidance({
+        description: data.description,
+        category: category?.name ?? result.categorySlug,
+        priority: result.priority,
+        location: locationLabel,
+      });
+
       return {
         ticketId: ticket.id,
         ticketNumber: ticket.ticket_number,
@@ -203,6 +212,7 @@ export const submitMaintenanceRequest = createServerFn({ method: "POST" })
           priority: result.priority,
           reason: result.reason,
         },
+        guidance,
       };
     }
 
@@ -226,11 +236,18 @@ export const submitMaintenanceRequest = createServerFn({ method: "POST" })
       reason: "AI classification was unavailable, so no technician could be matched.",
     });
 
+    const { generateImmediateGuidance } = await import("./ai/service.server");
+    const guidance = await generateImmediateGuidance({
+      description: data.description,
+      location: locationLabel,
+    });
+
     return {
       ticketId: ticket.id,
       ticketNumber: ticket.ticket_number,
       status: "new",
       ai: { ok: false, error: result.error },
+      guidance,
     };
   });
 
