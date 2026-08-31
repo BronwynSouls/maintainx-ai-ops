@@ -7,6 +7,7 @@ import {
   Loader2,
   Mic,
   MicOff,
+  ShieldAlert,
   Sparkles,
   X,
 } from "lucide-react";
@@ -235,6 +236,25 @@ export function MaintenanceRequestForm({
             AI classification is a recommendation — the maintenance team makes the final decision.
           </p>
         </div>
+
+        {result.guidance.ok && (
+          <div className="rounded-lg border border-border bg-muted/50 p-4">
+            <p className="flex items-center gap-2 text-sm font-semibold">
+              <ShieldAlert className="size-4 text-primary" aria-hidden /> Immediate guidance while
+              we arrange maintenance
+            </p>
+            <p className="mt-2 text-sm">{result.guidance.guidance}</p>
+            {result.guidance.danger && (
+              <p className="mt-2 text-sm font-medium text-destructive">
+                This may be a dangerous situation — please contact Reception immediately.
+              </p>
+            )}
+            <p className="mt-3 text-xs text-muted-foreground">
+              AI guidance is general information only. Do not take any action that may put you at
+              risk.
+            </p>
+          </div>
+        )}
 
         <div className="flex flex-wrap gap-2">
           <Button
