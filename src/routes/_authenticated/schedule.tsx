@@ -90,16 +90,16 @@ function SchedulePage() {
                       <Link
                         to="/tickets/$ticketId"
                         params={{ ticketId: ticket.id }}
-                        className="truncate text-sm font-medium hover:underline"
+                        className="break-words text-sm font-medium hover:underline"
                       >
                         {ticket.title ?? ticket.ticket_number}
                       </Link>
-                      <p className="mt-0.5 text-xs text-muted-foreground">
+                      <p className="mt-0.5 text-xs break-words text-muted-foreground">
                         {ticket.ticket_number} · {ticket.hotels?.name ?? "—"} ·{" "}
                         {ticket.hotel_locations?.name ?? ticket.location_text ?? "—"} ·{" "}
                         {ticket.maintenance_categories?.name ?? "Unclassified"}
                       </p>
-                      <p className="mt-0.5 text-xs text-muted-foreground">
+                      <p className="mt-0.5 text-xs break-words text-muted-foreground">
                         Assigned {formatDate(ticket.assigned_at)}
                         {ticket.started_at ? ` · Started ${formatDate(ticket.started_at)}` : ""}
                       </p>
@@ -146,11 +146,11 @@ function SchedulePage() {
                   <div className="min-w-0">
                     <Link
                       to="/tickets/$ticketId"
-                      params={{ ticketId: ticket.id }}
-                      className="truncate text-sm font-medium hover:underline"
-                    >
-                      {ticket.title ?? ticket.ticket_number}
-                    </Link>
+                        params={{ ticketId: ticket.id }}
+                        className="break-words text-sm font-medium hover:underline"
+                      >
+                        {ticket.title ?? ticket.ticket_number}
+                      </Link>
                     <p className="text-xs text-muted-foreground">
                       Resolved {formatDate(ticket.resolved_at)}
                     </p>
