@@ -130,7 +130,7 @@ function TicketDetail() {
       }
     >
       <div className="grid gap-5 lg:grid-cols-3">
-        <div className="space-y-5 lg:col-span-2">
+        <div className="min-w-0 space-y-5 lg:col-span-2">
           <section className="surface-panel p-5">
             <div className="flex flex-wrap items-center gap-2">
               <StatusBadge status={ticket.status} />
@@ -141,8 +141,8 @@ function TicketDetail() {
                 </span>
               )}
             </div>
-            <h2 className="mt-3 text-lg font-semibold">{ticket.title}</h2>
-            <p className="mt-2 text-sm whitespace-pre-wrap text-muted-foreground">
+            <h2 className="mt-3 text-lg font-semibold break-words">{ticket.title}</h2>
+            <p className="mt-2 text-sm whitespace-pre-wrap break-words text-muted-foreground">
               {ticket.description}
             </p>
 
@@ -226,7 +226,7 @@ function TicketDetail() {
                 </Button>
               </div>
             </div>
-            <p className="mt-3 text-sm whitespace-pre-wrap text-muted-foreground">
+            <p className="mt-3 text-sm whitespace-pre-wrap break-words text-muted-foreground">
               {ticket.ai_suggested_response ??
                 "No suggested response yet — generate one based on the current ticket context."}
             </p>
@@ -281,7 +281,7 @@ function TicketDetail() {
           </section>
         </div>
 
-        <aside className="surface-panel h-fit space-y-4 p-5">
+        <aside className="surface-panel h-fit min-w-0 space-y-4 p-5">
           <h3 className="text-sm font-semibold">Manage ticket</h3>
 
           {isTechnician && !isManager && (
@@ -385,9 +385,9 @@ function TicketDetail() {
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div>
+    <div className="min-w-0">
       <dt className="text-xs text-muted-foreground">{label}</dt>
-      <dd className="mt-0.5 font-medium capitalize">{children}</dd>
+      <dd className="mt-0.5 font-medium capitalize break-words">{children}</dd>
     </div>
   );
 }
