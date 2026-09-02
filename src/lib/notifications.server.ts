@@ -365,3 +365,28 @@ export async function notifyEscalation(input: { ticketId: string; reason: string
     await sendAppEmail({ to, subject, body });
   }
 }
+
+/**
+ * In-app alert to receptionists when a technician hands a ticket back to
+ * "New Ticket". Notification-only: no workflow or status side effects.
+ */
+export async function notifyHandback(input: {
+  ticketId: string;
+  technicianName: string;
+  reason?: string | null;
+}) {
+  const ticket = await ticketSummary(input.ticketId);
+  if (!ticket) return;
+  const { pushNotification, userIdsForRole } = await import("./inapp-notifications.server");
+  const receptionistIds = await userIdsForRole(ticket.hotel_id, "receptionist");
+  await pushNotification({
+    userIds: receptionistIds,
+    ticketId: ticket.id,
+    ticketNumber: ticket.ticket_number,
+    kind: "handback",
+    title: `${input.technicianName} returned ${ticket.ticket_number} to New Ticket.`,
+    message: input.reason || "The technician could not resolve the issue. Reassign it manually.",
+    severity: "warning",
+    dedupeKey: `handback:${ticket.id}:${input.reason ?? ""}:${new Date().toISOString().slice(0, 16)}`,
+  });
+}
