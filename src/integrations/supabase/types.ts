@@ -14,6 +14,59 @@ export type Database = {
   }
   public: {
     Tables: {
+      app_notifications: {
+        Row: {
+          created_at: string
+          dedupe_key: string
+          id: string
+          kind: string
+          message: string | null
+          read_at: string | null
+          severity: string
+          ticket_id: string | null
+          ticket_number: string | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          dedupe_key: string
+          id?: string
+          kind: string
+          message?: string | null
+          read_at?: string | null
+          severity?: string
+          ticket_id?: string | null
+          ticket_number?: string | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          dedupe_key?: string
+          id?: string
+          kind?: string
+          message?: string | null
+          read_at?: string | null
+          severity?: string
+          ticket_id?: string | null
+          ticket_number?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "app_notifications_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       assets: {
         Row: {
           asset_tag: string | null

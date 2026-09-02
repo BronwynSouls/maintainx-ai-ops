@@ -16,11 +16,14 @@ import {
 } from "lucide-react";
 import { Brand } from "./brand";
 import { ThemeToggle } from "./theme-toggle";
+import { NotificationBell } from "./notification-bell";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useAccount } from "@/hooks/useAccount";
+import { useNotifications } from "@/hooks/useNotifications";
 import { ROLE_LABELS } from "@/lib/domain";
 import { cn } from "@/lib/utils";
+
 
 type NavItem = {
   to: string;
@@ -59,8 +62,12 @@ export function AppShell({
   const { account, roles, primaryRole } = useAccount();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { notifications, unreadCount, newJobCount, markRead, markAllRead } = useNotifications();
+  const isTechnicianOnly = roles.includes("technician" as never) && roles.length === 1;
+  const showBell = !isTechnicianOnly;
 
   const items = NAV.filter((item) => !item.roles || item.roles.some((r) => roles.includes(r as never)));
+
 
   async function signOut() {
     await queryClient.cancelQueries();
@@ -98,7 +105,16 @@ export function AppShell({
           >
             <item.icon className="size-4 shrink-0" aria-hidden />
             {item.label}
+            {item.to === "/schedule" && newJobCount > 0 && (
+              <span
+                className="ml-auto flex min-w-5 items-center justify-center rounded-full bg-priority-critical px-1.5 py-0.5 text-[11px] font-bold text-priority-critical-foreground"
+                aria-label={`${newJobCount} new assigned jobs`}
+              >
+                {newJobCount > 9 ? "9+" : newJobCount}
+              </span>
+            )}
           </Link>
+
         ))}
       </nav>
       <div className="border-t border-sidebar-border p-3">
@@ -151,6 +167,14 @@ export function AppShell({
           </div>
           <div className={cn("flex shrink-0 flex-wrap items-center justify-end gap-2")}>
             {actions}
+            {showBell && (
+              <NotificationBell
+                notifications={notifications}
+                unreadCount={unreadCount}
+                markRead={markRead}
+                markAllRead={markAllRead}
+              />
+            )}
             <ThemeToggle />
           </div>
         </header>

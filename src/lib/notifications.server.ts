@@ -93,6 +93,51 @@ export async function notifyReceptionistsOfAssignment(input: {
   const key = input.assigned ? "receptionist:assigned" : "receptionist:unassigned";
   const location = ticket.hotel_locations?.name ?? ticket.location_text ?? "—";
 
+  // --- In-app notifications (independent of email delivery) ---
+  {
+    const { pushNotification, userIdsForRole } = await import("./inapp-notifications.server");
+    const receptionistIds = await userIdsForRole(ticket.hotel_id, "receptionist");
+    const shortDescription = ticket.title ?? ticket.maintenance_categories?.name ?? "Maintenance issue";
+    if (input.assigned) {
+      await pushNotification({
+        userIds: receptionistIds,
+        ticketId: ticket.id,
+        ticketNumber: ticket.ticket_number,
+        kind: "ai_assigned",
+        title: `AI assigned ${ticket.ticket_number} to ${input.technicianName ?? "a technician"}.`,
+        message: `${shortDescription} · ${location}`,
+        severity: ticket.priority === "critical" ? "critical" : "info",
+        dedupeKey: `assigned:${ticket.id}:${input.technicianName ?? ""}`,
+      });
+    } else {
+      await pushNotification({
+        userIds: receptionistIds,
+        ticketId: ticket.id,
+        ticketNumber: ticket.ticket_number,
+        kind: "unassigned",
+        title: `${ticket.ticket_number} is unassigned — no suitable technician available.`,
+        message: `${shortDescription} · ${input.reason ?? "Please assign it manually."}`,
+        severity: "warning",
+        dedupeKey: `unassigned:${ticket.id}`,
+      });
+    }
+
+    if (ticket.priority === "critical") {
+      const managerIds = await userIdsForRole(ticket.hotel_id, "hotel_manager");
+      await pushNotification({
+        userIds: managerIds,
+        ticketId: ticket.id,
+        ticketNumber: ticket.ticket_number,
+        kind: "critical",
+        title: `Critical ticket ${ticket.ticket_number} requires attention.`,
+        message: `${shortDescription} · ${location}`,
+        severity: "critical",
+        dedupeKey: `critical:${ticket.id}`,
+      });
+    }
+  }
+
+
   const subject = input.assigned
     ? `${ticket.ticket_number} assigned to ${input.technicianName ?? "a technician"}`
     : `${ticket.ticket_number} needs manual assignment`;
@@ -194,6 +239,24 @@ export async function notifyTechnicianOfAssignment(input: { ticketId: string }) 
     .maybeSingle();
   if (!technician?.profile_id) return;
 
+  // --- In-app notification for the assigned technician only ---
+  {
+    const { pushNotification } = await import("./inapp-notifications.server");
+    await pushNotification({
+      userIds: [technician.profile_id],
+      ticketId: ticket.id,
+      ticketNumber: ticket.ticket_number,
+      kind: "new_job",
+      title: `New job assigned: ${ticket.ticket_number}`,
+      message: `${ticket.title ?? "Maintenance issue"} · ${
+        ticket.hotel_locations?.name ?? ticket.location_text ?? "—"
+      }`,
+      severity: ticket.priority === "critical" ? "critical" : "info",
+      dedupeKey: `new_job:${ticket.id}:${technicianId}`,
+    });
+  }
+
+
   const { data: profile } = await db
     .from("profiles")
     .select("email")
@@ -254,6 +317,26 @@ export async function notifyEscalation(input: { ticketId: string; reason: string
   ]);
   const recipients = [...new Set([...receptionists, ...managers])];
 
+  // --- In-app escalation alert for receptionists and hotel managers ---
+  {
+    const { pushNotification, userIdsForRole } = await import("./inapp-notifications.server");
+    const [receptionistIds, managerIds] = await Promise.all([
+      userIdsForRole(ticket.hotel_id, "receptionist"),
+      userIdsForRole(ticket.hotel_id, "hotel_manager"),
+    ]);
+    await pushNotification({
+      userIds: [...receptionistIds, ...managerIds],
+      ticketId: ticket.id,
+      ticketNumber: ticket.ticket_number,
+      kind: "escalation",
+      title: `Escalated: ${ticket.ticket_number} needs attention.`,
+      message: input.reason,
+      severity: "critical",
+      dedupeKey: `escalation:${ticket.id}:${input.reason}`,
+    });
+  }
+
+
   const subject = `ESCALATED: ${ticket.ticket_number} needs attention`;
   const body = [
     `Ticket ${ticket.ticket_number} has been escalated.`,
@@ -281,4 +364,29 @@ export async function notifyEscalation(input: { ticketId: string; reason: string
   for (const to of recipients) {
     await sendAppEmail({ to, subject, body });
   }
+}
+
+/**
+ * In-app alert to receptionists when a technician hands a ticket back to
+ * "New Ticket". Notification-only: no workflow or status side effects.
+ */
+export async function notifyHandback(input: {
+  ticketId: string;
+  technicianName: string;
+  reason?: string | null;
+}) {
+  const ticket = await ticketSummary(input.ticketId);
+  if (!ticket) return;
+  const { pushNotification, userIdsForRole } = await import("./inapp-notifications.server");
+  const receptionistIds = await userIdsForRole(ticket.hotel_id, "receptionist");
+  await pushNotification({
+    userIds: receptionistIds,
+    ticketId: ticket.id,
+    ticketNumber: ticket.ticket_number,
+    kind: "handback",
+    title: `${input.technicianName} returned ${ticket.ticket_number} to New Ticket.`,
+    message: input.reason || "The technician could not resolve the issue. Reassign it manually.",
+    severity: "warning",
+    dedupeKey: `handback:${ticket.id}:${input.reason ?? ""}:${new Date().toISOString().slice(0, 16)}`,
+  });
 }
