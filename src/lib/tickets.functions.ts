@@ -541,7 +541,9 @@ export const updateTicket = createServerFn({ method: "POST" })
     if (data.priority) parts.push(`priority → ${data.priority}`);
     if (data.technicianId !== undefined)
       parts.push(data.technicianId ? "technician assigned" : "technician cleared");
+    if (data.externalEtaAt) parts.push(`external ETA recorded`);
     if (data.note) parts.push(data.note);
+
 
     if (parts.length > 0) {
       await context.supabase.from("ticket_activity").insert({
