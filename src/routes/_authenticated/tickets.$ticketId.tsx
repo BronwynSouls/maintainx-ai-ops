@@ -19,7 +19,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { getTicket, regenerateTicketResponse, updateTicket } from "@/lib/tickets.functions";
 import { useAccount } from "@/hooks/useAccount";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   formatDate,
   PRIORITY_ORDER,
@@ -29,6 +29,7 @@ import {
   type TicketStatus,
 } from "@/lib/domain";
 import { slaCountdown } from "@/lib/sla";
+import { markTicketNotificationsRead } from "@/lib/notifications.functions";
 
 export const Route = createFileRoute("/_authenticated/tickets/$ticketId")({
   head: () => ({
@@ -56,8 +57,16 @@ function TicketDetail() {
   const queryClient = useQueryClient();
   const { isTechnician, isManager, isReceptionist, roles } = useAccount();
   const canAssign = isReceptionist || roles.includes("admin");
+  const markTicketRead = useServerFn(markTicketNotificationsRead);
   const [eta, setEta] = useState("");
   const [handbackReason, setHandbackReason] = useState("");
+
+  // Viewing the ticket clears its unread notifications for this user.
+  useEffect(() => {
+    void markTicketRead({ data: { ticketId } })
+      .then(() => queryClient.invalidateQueries({ queryKey: ["notifications"] }))
+      .catch(() => undefined);
+  }, [ticketId, markTicketRead, queryClient]);
   const [showHandback, setShowHandback] = useState(false);
 
   const { data, isLoading } = useQuery({
