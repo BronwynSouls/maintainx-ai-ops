@@ -226,3 +226,59 @@ export async function notifyTechnicianOfAssignment(input: { ticketId: string }) 
 
   await sendAppEmail({ to, subject, body });
 }
+
+async function roleEmails(hotelId: string, role: "receptionist" | "hotel_manager") {
+  const db = await admin();
+  const { data: roles } = await db.from("user_roles").select("user_id").eq("role", role);
+  const ids = (roles ?? []).map((r) => r.user_id);
+  if (ids.length === 0) return [];
+  const { data: profiles } = await db
+    .from("profiles")
+    .select("email, hotel_id")
+    .in("id", ids)
+    .eq("hotel_id", hotelId);
+  return (profiles ?? []).map((p) => p.email).filter((e): e is string => Boolean(e));
+}
+
+/**
+ * Escalation alert to the receptionist and hotel manager of the ticket's
+ * property. The ticket status is never changed by an escalation.
+ */
+export async function notifyEscalation(input: { ticketId: string; reason: string }) {
+  const ticket = await ticketSummary(input.ticketId);
+  if (!ticket) return;
+
+  const [receptionists, managers] = await Promise.all([
+    roleEmails(ticket.hotel_id, "receptionist"),
+    roleEmails(ticket.hotel_id, "hotel_manager"),
+  ]);
+  const recipients = [...new Set([...receptionists, ...managers])];
+
+  const subject = `ESCALATED: ${ticket.ticket_number} needs attention`;
+  const body = [
+    `Ticket ${ticket.ticket_number} has been escalated.`,
+    "",
+    `Reason: ${input.reason}`,
+    `Title: ${ticket.title ?? "—"}`,
+    `Property: ${ticket.hotels?.name ?? "—"}`,
+    `Location: ${ticket.hotel_locations?.name ?? ticket.location_text ?? "—"}`,
+    `Category: ${ticket.maintenance_categories?.name ?? "Unclassified"}`,
+    `Priority: ${ticket.priority}`,
+    `Status (unchanged): ${statusLabel(ticket.status)}`,
+    `Assigned technician: ${ticket.technicians?.full_name ?? "Unassigned"}`,
+    "",
+    "The receptionist is responsible for finding and assigning a suitable technician.",
+  ].join("\n");
+
+  const fresh = await claim(
+    input.ticketId,
+    `escalation:${input.reason}:${new Date().toISOString()}`,
+    "Receptionist and hotel manager notified of escalation.",
+    recipients,
+  );
+  if (!fresh) return;
+
+  for (const to of recipients) {
+    await sendAppEmail({ to, subject, body });
+  }
+}
