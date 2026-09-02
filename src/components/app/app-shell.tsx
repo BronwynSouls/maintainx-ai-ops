@@ -107,7 +107,7 @@ export function AppShell({
             {item.label}
             {item.to === "/schedule" && newJobCount > 0 && (
               <span
-                className="ml-auto flex min-w-5 items-center justify-center rounded-full bg-priority-critical px-1.5 py-0.5 text-[11px] font-bold text-white"
+                className="ml-auto flex min-w-5 items-center justify-center rounded-full bg-priority-critical px-1.5 py-0.5 text-[11px] font-bold text-priority-critical-foreground"
                 aria-label={`${newJobCount} new assigned jobs`}
               >
                 {newJobCount > 9 ? "9+" : newJobCount}

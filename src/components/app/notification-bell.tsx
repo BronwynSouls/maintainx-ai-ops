@@ -35,7 +35,7 @@ export function NotificationBell({
         <Button variant="ghost" size="icon" className="relative" aria-label="Notifications">
           <Bell className="size-5" />
           {unreadCount > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 flex min-w-4 items-center justify-center rounded-full bg-priority-critical px-1 text-[10px] font-bold text-white">
+            <span className="absolute -top-0.5 -right-0.5 flex min-w-4 items-center justify-center rounded-full bg-priority-critical px-1 text-[10px] font-bold text-priority-critical-foreground">
               {unreadCount > 9 ? "9+" : unreadCount}
             </span>
           )}
