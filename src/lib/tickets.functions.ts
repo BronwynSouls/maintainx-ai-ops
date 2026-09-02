@@ -587,6 +587,15 @@ export const updateTicket = createServerFn({ method: "POST" })
         status: newStatus,
       });
     }
+    if (handedBack) {
+      const { notifyHandback } = await import("./notifications.server");
+      await notifyHandback({
+        ticketId: data.id,
+        technicianName: actorLabel,
+        reason: data.escalationReason ?? null,
+      });
+    }
+
 
     // --- SLA / escalation side effects (tracked tickets only) ---
     const isTracked = Boolean((current as { sla_tracked?: boolean } | null)?.sla_tracked);
