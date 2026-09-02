@@ -93,6 +93,51 @@ export async function notifyReceptionistsOfAssignment(input: {
   const key = input.assigned ? "receptionist:assigned" : "receptionist:unassigned";
   const location = ticket.hotel_locations?.name ?? ticket.location_text ?? "—";
 
+  // --- In-app notifications (independent of email delivery) ---
+  {
+    const { pushNotification, userIdsForRole } = await import("./inapp-notifications.server");
+    const receptionistIds = await userIdsForRole(ticket.hotel_id, "receptionist");
+    const shortDescription = ticket.title ?? ticket.maintenance_categories?.name ?? "Maintenance issue";
+    if (input.assigned) {
+      await pushNotification({
+        userIds: receptionistIds,
+        ticketId: ticket.id,
+        ticketNumber: ticket.ticket_number,
+        kind: "ai_assigned",
+        title: `AI assigned ${ticket.ticket_number} to ${input.technicianName ?? "a technician"}.`,
+        message: `${shortDescription} · ${location}`,
+        severity: ticket.priority === "critical" ? "critical" : "info",
+        dedupeKey: `assigned:${ticket.id}:${input.technicianName ?? ""}`,
+      });
+    } else {
+      await pushNotification({
+        userIds: receptionistIds,
+        ticketId: ticket.id,
+        ticketNumber: ticket.ticket_number,
+        kind: "unassigned",
+        title: `${ticket.ticket_number} is unassigned — no suitable technician available.`,
+        message: `${shortDescription} · ${input.reason ?? "Please assign it manually."}`,
+        severity: "warning",
+        dedupeKey: `unassigned:${ticket.id}`,
+      });
+    }
+
+    if (ticket.priority === "critical") {
+      const managerIds = await userIdsForRole(ticket.hotel_id, "hotel_manager");
+      await pushNotification({
+        userIds: managerIds,
+        ticketId: ticket.id,
+        ticketNumber: ticket.ticket_number,
+        kind: "critical",
+        title: `Critical ticket ${ticket.ticket_number} requires attention.`,
+        message: `${shortDescription} · ${location}`,
+        severity: "critical",
+        dedupeKey: `critical:${ticket.id}`,
+      });
+    }
+  }
+
+
   const subject = input.assigned
     ? `${ticket.ticket_number} assigned to ${input.technicianName ?? "a technician"}`
     : `${ticket.ticket_number} needs manual assignment`;
