@@ -239,6 +239,24 @@ export async function notifyTechnicianOfAssignment(input: { ticketId: string }) 
     .maybeSingle();
   if (!technician?.profile_id) return;
 
+  // --- In-app notification for the assigned technician only ---
+  {
+    const { pushNotification } = await import("./inapp-notifications.server");
+    await pushNotification({
+      userIds: [technician.profile_id],
+      ticketId: ticket.id,
+      ticketNumber: ticket.ticket_number,
+      kind: "new_job",
+      title: `New job assigned: ${ticket.ticket_number}`,
+      message: `${ticket.title ?? "Maintenance issue"} · ${
+        ticket.hotel_locations?.name ?? ticket.location_text ?? "—"
+      }`,
+      severity: ticket.priority === "critical" ? "critical" : "info",
+      dedupeKey: `new_job:${ticket.id}:${technicianId}`,
+    });
+  }
+
+
   const { data: profile } = await db
     .from("profiles")
     .select("email")
