@@ -127,6 +127,9 @@ function TicketDetail() {
     );
   }
 
+  const assignSla = slaCountdown(ticket.assign_due_at);
+  const resolveSla = slaCountdown(ticket.resolve_due_at);
+
   return (
     <AppShell
       title={ticket.ticket_number}
@@ -313,6 +316,46 @@ function TicketDetail() {
         <aside className="surface-panel h-fit min-w-0 space-y-4 p-5">
           <h3 className="text-sm font-semibold">Manage ticket</h3>
 
+          {ticket.sla_tracked && (
+            <div className="rounded-lg border border-border p-3 text-xs">
+              <p className="text-sm font-semibold">SLA targets</p>
+              <p className="mt-1 text-muted-foreground">
+                Assign:{" "}
+                <span
+                  className={
+                    assignSla?.overdue && !ticket.assigned_technician_id
+                      ? "font-medium text-priority-critical"
+                      : "font-medium text-foreground"
+                  }
+                >
+                  {ticket.assigned_technician_id
+                    ? "met"
+                    : (assignSla?.label ?? "—")}
+                </span>
+              </p>
+              <p className="mt-0.5 text-muted-foreground">
+                Resolve:{" "}
+                <span
+                  className={
+                    resolveSla?.overdue && ticket.status !== "resolved"
+                      ? "font-medium text-priority-critical"
+                      : "font-medium text-foreground"
+                  }
+                >
+                  {ticket.status === "resolved" ? "met" : (resolveSla?.label ?? "—")}
+                </span>
+              </p>
+              {ticket.external_eta_at && (
+                <p className="mt-0.5 text-muted-foreground">
+                  External ETA:{" "}
+                  <span className="font-medium text-foreground">
+                    {formatDate(ticket.external_eta_at)}
+                  </span>
+                </p>
+              )}
+            </div>
+          )}
+
           {isTechnician && !isManager && (
             <div className="flex flex-wrap gap-2">
               {ticket.status !== "in_progress" && ticket.status !== "resolved" && (
@@ -334,6 +377,42 @@ function TicketDetail() {
                   Mark resolved
                 </Button>
               )}
+              {ticket.status !== "resolved" && ticket.status !== "new" && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setShowHandback((v) => !v)}
+                >
+                  Can't resolve
+                </Button>
+              )}
+            </div>
+          )}
+
+          {isTechnician && !isManager && showHandback && (
+            <div className="space-y-2 rounded-lg border border-border p-3">
+              <Label htmlFor="handback-reason">Why can't you resolve this?</Label>
+              <Textarea
+                id="handback-reason"
+                rows={3}
+                value={handbackReason}
+                onChange={(e) => setHandbackReason(e.target.value)}
+                placeholder="e.g. Specialist part required — outside my skill set"
+              />
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={mutation.isPending || handbackReason.trim().length < 3}
+                onClick={() =>
+                  mutation.mutate({ status: "new", escalationReason: handbackReason.trim() })
+                }
+              >
+                Return to New Ticket &amp; escalate
+              </Button>
+              <p className="text-xs text-muted-foreground">
+                This escalates the ticket and alerts the receptionist and hotel manager. The
+                receptionist will assign another technician.
+              </p>
             </div>
           )}
 
@@ -404,12 +483,45 @@ function TicketDetail() {
                 Only receptionists can assign or reassign tickets. AI assigns automatically where
                 possible.
               </p>
+
+              {ticket.technicians?.technician_type === "external" && (
+                <div className="space-y-2 border-t border-border pt-3">
+                  <Label htmlFor="ticket-eta">External technician ETA</Label>
+                  <Input
+                    id="ticket-eta"
+                    type="datetime-local"
+                    value={eta || toLocalInput(ticket.external_eta_at)}
+                    onChange={(e) => setEta(e.target.value)}
+                  />
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={mutation.isPending || !eta}
+                    onClick={() =>
+                      mutation.mutate({ externalEtaAt: new Date(eta).toISOString() })
+                    }
+                  >
+                    Save ETA
+                  </Button>
+                  <p className="text-xs text-muted-foreground">
+                    No escalation happens during the recorded travel window. The ticket escalates if
+                    the ETA passes without progress.
+                  </p>
+                </div>
+              )}
             </div>
           )}
         </aside>
       </div>
     </AppShell>
   );
+}
+
+function toLocalInput(value: string | null | undefined) {
+  if (!value) return "";
+  const d = new Date(value);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
