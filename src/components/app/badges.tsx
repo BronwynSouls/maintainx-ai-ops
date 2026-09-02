@@ -38,3 +38,22 @@ export function PriorityBadge({
     </span>
   );
 }
+
+/**
+ * Escalation flag. This is NOT a status — the ticket keeps its own status and
+ * this badge is rendered alongside it.
+ */
+export function EscalatedBadge({ className }: { className?: string }) {
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-1.5 rounded-md border border-priority-critical bg-priority-critical/10 px-2 py-0.5 text-xs font-semibold whitespace-nowrap text-priority-critical",
+        className,
+      )}
+      title="This ticket breached an SLA target or was returned by a technician"
+    >
+      <span className="size-1.5 rounded-full bg-current" aria-hidden />
+      Escalated
+    </span>
+  );
+}
