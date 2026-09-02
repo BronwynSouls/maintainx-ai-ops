@@ -142,6 +142,12 @@ export const submitMaintenanceRequest = createServerFn({ method: "POST" })
         metadata: { reason: result.reason, confidence: result.confidence },
       });
 
+      // --- SLA targets (new tickets only) ---
+      const { applySlaTargets } = await import("./escalation.server");
+      await applySlaTargets({ ticketId: ticket.id, priority: result.priority });
+
+
+
       // --- Automatic technician assignment (skill + availability aware) ---
       const { assignTechnician } = await import("./assignment.server");
       const assignment = await assignTechnician({
