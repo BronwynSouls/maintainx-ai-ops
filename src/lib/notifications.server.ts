@@ -317,6 +317,26 @@ export async function notifyEscalation(input: { ticketId: string; reason: string
   ]);
   const recipients = [...new Set([...receptionists, ...managers])];
 
+  // --- In-app escalation alert for receptionists and hotel managers ---
+  {
+    const { pushNotification, userIdsForRole } = await import("./inapp-notifications.server");
+    const [receptionistIds, managerIds] = await Promise.all([
+      userIdsForRole(ticket.hotel_id, "receptionist"),
+      userIdsForRole(ticket.hotel_id, "hotel_manager"),
+    ]);
+    await pushNotification({
+      userIds: [...receptionistIds, ...managerIds],
+      ticketId: ticket.id,
+      ticketNumber: ticket.ticket_number,
+      kind: "escalation",
+      title: `Escalated: ${ticket.ticket_number} needs attention.`,
+      message: input.reason,
+      severity: "critical",
+      dedupeKey: `escalation:${ticket.id}:${input.reason}`,
+    });
+  }
+
+
   const subject = `ESCALATED: ${ticket.ticket_number} needs attention`;
   const body = [
     `Ticket ${ticket.ticket_number} has been escalated.`,
