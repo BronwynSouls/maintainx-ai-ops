@@ -236,6 +236,12 @@ export const submitMaintenanceRequest = createServerFn({ method: "POST" })
       metadata: { error: result.error },
     });
 
+    // --- SLA targets still apply when classification fails ---
+    const { applySlaTargets: applySla } = await import("./escalation.server");
+    await applySla({ ticketId: ticket.id, priority: "medium" });
+
+
+
     const { notifyReceptionistsOfAssignment } = await import("./notifications.server");
     await notifyReceptionistsOfAssignment({
       ticketId: ticket.id,
