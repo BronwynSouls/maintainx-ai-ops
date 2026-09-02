@@ -105,7 +105,16 @@ export function AppShell({
           >
             <item.icon className="size-4 shrink-0" aria-hidden />
             {item.label}
+            {item.to === "/schedule" && newJobCount > 0 && (
+              <span
+                className="ml-auto flex min-w-5 items-center justify-center rounded-full bg-priority-critical px-1.5 py-0.5 text-[11px] font-bold text-white"
+                aria-label={`${newJobCount} new assigned jobs`}
+              >
+                {newJobCount > 9 ? "9+" : newJobCount}
+              </span>
+            )}
           </Link>
+
         ))}
       </nav>
       <div className="border-t border-sidebar-border p-3">
