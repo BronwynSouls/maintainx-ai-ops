@@ -588,8 +588,38 @@ export const updateTicket = createServerFn({ method: "POST" })
       });
     }
 
+    // --- SLA / escalation side effects (tracked tickets only) ---
+    const isTracked = Boolean((current as { sla_tracked?: boolean } | null)?.sla_tracked);
+    if (isTracked) {
+      const { recomputeSlaTargets, escalateTicket } = await import("./escalation.server");
+      if (data.priority) await recomputeSlaTargets(data.id, data.priority);
+
+      if (handedBack) {
+        await escalateTicket({
+          ticketId: data.id,
+          key: `handback:${new Date().toISOString()}`,
+          actorLabel,
+          reason: `Technician ${actorLabel} returned the ticket to New Ticket — ${
+            data.escalationReason || "the issue could not be resolved"
+          }. A suitable technician must be assigned by the receptionist.`,
+        });
+      }
+    }
+
     return { ok: true as const, error: null };
   });
+
+/**
+ * SLA sweep — escalates tracked tickets that breached an assignment,
+ * ETA or resolution target. Called by staff dashboards on load.
+ */
+export const runSlaEscalationCheck = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async () => {
+    const { runEscalationSweep } = await import("./escalation.server");
+    return runEscalationSweep();
+  });
+
 
 /** Regenerate the AI suggested response for a ticket. */
 export const regenerateTicketResponse = createServerFn({ method: "POST" })
