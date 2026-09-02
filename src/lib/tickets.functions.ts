@@ -423,7 +423,7 @@ export const updateTicket = createServerFn({ method: "POST" })
     // Fetch current status so we can record status history
     const { data: current } = await context.supabase
       .from("tickets")
-      .select("id, status, assigned_technician_id, category_id")
+      .select("id, status, assigned_technician_id, category_id, sla_tracked, external_eta_at")
       .eq("id", data.id)
       .maybeSingle();
     const previousStatus = (current as { status?: TicketStatus } | null)?.status ?? null;
