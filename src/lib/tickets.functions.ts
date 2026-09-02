@@ -492,7 +492,22 @@ export const updateTicket = createServerFn({ method: "POST" })
     if (data.technicianId !== undefined) {
       patch["assigned_technician_id"] = data.technicianId;
       if (data.technicianId && !data.status) patch["status"] = "assigned";
+      // A fresh assignment starts a new ETA window.
+      if (data.externalEtaAt === undefined) patch["external_eta_at"] = null;
     }
+    if (data.externalEtaAt !== undefined) patch["external_eta_at"] = data.externalEtaAt;
+
+    // A technician handing the ticket back to "New Ticket" releases it so the
+    // receptionist can find another suitable technician.
+    const handedBack =
+      isTechnicianOnly &&
+      data.status === "new" &&
+      (previousStatus === "assigned" || previousStatus === "in_progress");
+    if (handedBack) {
+      patch["assigned_technician_id"] = null;
+      patch["external_eta_at"] = null;
+    }
+
 
     if (Object.keys(patch).length > 0) {
       const { error } = await context.supabase
