@@ -62,8 +62,12 @@ export function AppShell({
   const { account, roles, primaryRole } = useAccount();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { notifications, unreadCount, newJobCount, markRead, markAllRead } = useNotifications();
+  const isTechnicianOnly = roles.includes("technician" as never) && roles.length === 1;
+  const showBell = !isTechnicianOnly;
 
   const items = NAV.filter((item) => !item.roles || item.roles.some((r) => roles.includes(r as never)));
+
 
   async function signOut() {
     await queryClient.cancelQueries();
