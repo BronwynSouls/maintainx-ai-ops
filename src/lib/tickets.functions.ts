@@ -395,6 +395,11 @@ export const updateTicket = createServerFn({ method: "POST" })
         categoryId: z.string().uuid().nullable().optional(),
         technicianId: z.string().uuid().nullable().optional(),
         note: z.string().trim().max(500).optional(),
+        /** Receptionist-recorded ETA for an external technician (ISO string). */
+        externalEtaAt: z.string().datetime().nullable().optional(),
+        /** Reason a technician is handing the ticket back to New Ticket. */
+        escalationReason: z.string().trim().max(500).optional(),
+
       })
       .parse(input),
   )
