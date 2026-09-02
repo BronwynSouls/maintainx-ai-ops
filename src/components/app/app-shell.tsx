@@ -16,11 +16,14 @@ import {
 } from "lucide-react";
 import { Brand } from "./brand";
 import { ThemeToggle } from "./theme-toggle";
+import { NotificationBell } from "./notification-bell";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useAccount } from "@/hooks/useAccount";
+import { useNotifications } from "@/hooks/useNotifications";
 import { ROLE_LABELS } from "@/lib/domain";
 import { cn } from "@/lib/utils";
+
 
 type NavItem = {
   to: string;
