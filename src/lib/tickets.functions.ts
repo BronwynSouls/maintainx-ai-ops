@@ -271,6 +271,9 @@ const TICKET_SELECT = `
   ai_status, ai_suggested_response, ai_response_at,
   needs_manual_classification, assigned_technician_id,
   created_at, updated_at, resolved_at, assigned_at, started_at,
+  sla_tracked, assign_due_at, resolve_due_at, external_eta_at,
+  is_escalated, escalated_at, escalation_reason, escalation_count,
+
   hotels ( id, name, city ),
   hotel_locations ( id, name, room_number ),
   maintenance_categories ( id, slug, name ),
