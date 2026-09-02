@@ -28,8 +28,8 @@ export const listMyNotifications = createServerFn({ method: "GET" })
   });
 
 export const markNotificationRead = createServerFn({ method: "POST" })
-  .validator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
   .middleware([requireSupabaseAuth])
+  .validator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
   .handler(async ({ context, data }) => {
     await context.supabase
       .from("app_notifications")
@@ -51,8 +51,8 @@ export const markAllNotificationsRead = createServerFn({ method: "POST" })
 
 /** Marks notifications for one ticket read — used when the user opens it. */
 export const markTicketNotificationsRead = createServerFn({ method: "POST" })
-  .validator((input: unknown) => z.object({ ticketId: z.string().uuid() }).parse(input))
   .middleware([requireSupabaseAuth])
+  .validator((input: unknown) => z.object({ ticketId: z.string().uuid() }).parse(input))
   .handler(async ({ context, data }) => {
     await context.supabase
       .from("app_notifications")
