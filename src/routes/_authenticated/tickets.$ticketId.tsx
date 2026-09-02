@@ -1,12 +1,14 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowLeft, Copy, MessageSquareText, RefreshCw, Sparkles } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Copy, MessageSquareText, RefreshCw, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/app/app-shell";
-import { PriorityBadge, StatusBadge } from "@/components/app/badges";
+import { EscalatedBadge, PriorityBadge, StatusBadge } from "@/components/app/badges";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -17,6 +19,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { getTicket, regenerateTicketResponse, updateTicket } from "@/lib/tickets.functions";
 import { useAccount } from "@/hooks/useAccount";
+import { useState } from "react";
 import {
   formatDate,
   PRIORITY_ORDER,
@@ -25,6 +28,7 @@ import {
   type TicketPriority,
   type TicketStatus,
 } from "@/lib/domain";
+import { slaCountdown } from "@/lib/sla";
 
 export const Route = createFileRoute("/_authenticated/tickets/$ticketId")({
   head: () => ({
@@ -52,6 +56,9 @@ function TicketDetail() {
   const queryClient = useQueryClient();
   const { isTechnician, isManager, isReceptionist, roles } = useAccount();
   const canAssign = isReceptionist || roles.includes("admin");
+  const [eta, setEta] = useState("");
+  const [handbackReason, setHandbackReason] = useState("");
+  const [showHandback, setShowHandback] = useState(false);
 
   const { data, isLoading } = useQuery({
     queryKey: ["ticket", ticketId],
@@ -63,6 +70,8 @@ function TicketDetail() {
       status?: TicketStatus;
       priority?: TicketPriority;
       technicianId?: string | null;
+      externalEtaAt?: string | null;
+      escalationReason?: string;
     }) => saveTicket({ data: { id: ticketId, ...patch } }),
     onSuccess: (result) => {
       if (result && result.ok === false) {
@@ -70,6 +79,8 @@ function TicketDetail() {
         return;
       }
       toast.success("Ticket updated");
+      setShowHandback(false);
+      setHandbackReason("");
       queryClient.invalidateQueries({ queryKey: ["ticket", ticketId] });
       queryClient.invalidateQueries({ queryKey: ["tickets"] });
     },
@@ -135,12 +146,30 @@ function TicketDetail() {
             <div className="flex flex-wrap items-center gap-2">
               <StatusBadge status={ticket.status} />
               <PriorityBadge priority={ticket.priority} />
+              {ticket.is_escalated && <EscalatedBadge />}
               {ticket.needs_manual_classification && (
                 <span className="rounded-md bg-status-pending px-2 py-0.5 text-xs font-medium text-status-pending-foreground">
                   Needs manual classification
                 </span>
               )}
             </div>
+            {ticket.is_escalated && ticket.escalation_reason && (
+              <div className="mt-3 flex items-start gap-2 rounded-lg border border-priority-critical/40 bg-priority-critical/10 p-3">
+                <AlertTriangle className="mt-0.5 size-4 shrink-0 text-priority-critical" aria-hidden />
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-priority-critical">
+                    Escalated · status unchanged
+                  </p>
+                  <p className="mt-0.5 text-sm break-words text-muted-foreground">
+                    {ticket.escalation_reason}
+                  </p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    {formatDate(ticket.escalated_at)}
+                    {ticket.escalation_count > 1 ? ` · escalated ${ticket.escalation_count} times` : ""}
+                  </p>
+                </div>
+              </div>
+            )}
             <h2 className="mt-3 text-lg font-semibold break-words">{ticket.title}</h2>
             <p className="mt-2 text-sm whitespace-pre-wrap break-words text-muted-foreground">
               {ticket.description}
