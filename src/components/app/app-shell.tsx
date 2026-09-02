@@ -167,6 +167,14 @@ export function AppShell({
           </div>
           <div className={cn("flex shrink-0 flex-wrap items-center justify-end gap-2")}>
             {actions}
+            {showBell && (
+              <NotificationBell
+                notifications={notifications}
+                unreadCount={unreadCount}
+                markRead={markRead}
+                markAllRead={markAllRead}
+              />
+            )}
             <ThemeToggle />
           </div>
         </header>
