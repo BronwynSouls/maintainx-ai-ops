@@ -42,7 +42,7 @@ function QrReport() {
     <div className="min-h-screen bg-muted/40">
       <header className="border-b border-border bg-background">
         <div className="mx-auto flex max-w-2xl flex-wrap items-center justify-between gap-3 px-4 py-4">
-          <Brand />
+          <Brand href="/" />
           <div className="flex items-center gap-2">
             <ThemeToggle />
           </div>

@@ -1,16 +1,19 @@
 import logo from "@/assets/maintainx-mark.png";
+import { Link } from "@tanstack/react-router";
 import { cn } from "@/lib/utils";
 
 export function Brand({
   className,
   compact = false,
   inverted = false,
+  href,
 }: {
   className?: string;
   compact?: boolean;
   inverted?: boolean;
+  href?: string;
 }) {
-  return (
+  const content = (
     <span className={cn("flex items-center gap-2.5", className)}>
       <img
         src={logo}
@@ -36,4 +39,14 @@ export function Brand({
       )}
     </span>
   );
+
+  if (href) {
+    return (
+      <Link to={href} className="inline-block">
+        {content}
+      </Link>
+    );
+  }
+
+  return content;
 }
