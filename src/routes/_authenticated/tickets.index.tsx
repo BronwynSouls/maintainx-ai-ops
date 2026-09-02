@@ -41,7 +41,16 @@ export const Route = createFileRoute("/_authenticated/tickets/")({
 
 function TicketsPage() {
   const fetchTickets = useServerFn(listTickets);
-  const { data, isLoading } = useQuery({ queryKey: ["tickets"], queryFn: () => fetchTickets() });
+  const runSlaCheck = useServerFn(runSlaEscalationCheck);
+  // Run the SLA sweep first so breached tickets are flagged in this list.
+  const { data, isLoading } = useQuery({
+    queryKey: ["tickets"],
+    queryFn: async () => {
+      await runSlaCheck().catch(() => undefined);
+      return fetchTickets();
+    },
+  });
+
 
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<"all" | TicketStatus>("all");
