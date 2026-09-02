@@ -2,7 +2,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { Bell, CheckCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { useNotifications } from "@/hooks/useNotifications";
+import type { AppNotification } from "@/lib/notifications.functions";
 import { cn } from "@/lib/utils";
 
 function timeAgo(iso: string) {
@@ -16,8 +16,17 @@ function timeAgo(iso: string) {
 }
 
 /** Notification centre for receptionists and hotel managers. */
-export function NotificationBell() {
-  const { notifications, unreadCount, markRead, markAllRead } = useNotifications();
+export function NotificationBell({
+  notifications,
+  unreadCount,
+  markRead,
+  markAllRead,
+}: {
+  notifications: AppNotification[];
+  unreadCount: number;
+  markRead: (id: string) => void;
+  markAllRead: () => void;
+}) {
   const navigate = useNavigate();
 
   return (

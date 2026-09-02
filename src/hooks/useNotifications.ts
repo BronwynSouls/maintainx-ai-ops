@@ -25,7 +25,7 @@ export function useNotifications() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const { account, isTechnician } = useAccount();
-  const userId = account?.profile?.id ?? null;
+  const userId = account?.userId ?? account?.profile?.id ?? null;
   const toasted = useRef<Set<string>>(new Set());
   const seeded = useRef(false);
 
