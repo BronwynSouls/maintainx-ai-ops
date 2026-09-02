@@ -287,6 +287,30 @@ export type Database = {
           },
         ]
       }
+      sla_targets: {
+        Row: {
+          assign_minutes: number
+          created_at: string
+          priority: Database["public"]["Enums"]["ticket_priority"]
+          resolve_minutes: number
+          updated_at: string
+        }
+        Insert: {
+          assign_minutes: number
+          created_at?: string
+          priority: Database["public"]["Enums"]["ticket_priority"]
+          resolve_minutes: number
+          updated_at?: string
+        }
+        Update: {
+          assign_minutes?: number
+          created_at?: string
+          priority?: Database["public"]["Enums"]["ticket_priority"]
+          resolve_minutes?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       technician_services: {
         Row: {
           created_at: string
@@ -526,16 +550,22 @@ export type Database = {
           ai_status: string
           ai_suggested_response: string | null
           asset_id: string | null
+          assign_due_at: string | null
           assigned_at: string | null
           assigned_technician_id: string | null
           audio_url: string | null
           category_id: string | null
           created_at: string
           description: string
+          escalated_at: string | null
+          escalation_count: number
+          escalation_reason: string | null
+          external_eta_at: string | null
           hotel_id: string
           id: string
           image_url: string | null
           input_method: string
+          is_escalated: boolean
           language: string
           location_id: string | null
           location_text: string | null
@@ -545,7 +575,9 @@ export type Database = {
           reporter_email: string | null
           reporter_type: Database["public"]["Enums"]["reporter_type"]
           reporter_user_id: string | null
+          resolve_due_at: string | null
           resolved_at: string | null
+          sla_tracked: boolean
           started_at: string | null
           status: Database["public"]["Enums"]["ticket_status"]
           ticket_number: string
@@ -563,16 +595,22 @@ export type Database = {
           ai_status?: string
           ai_suggested_response?: string | null
           asset_id?: string | null
+          assign_due_at?: string | null
           assigned_at?: string | null
           assigned_technician_id?: string | null
           audio_url?: string | null
           category_id?: string | null
           created_at?: string
           description: string
+          escalated_at?: string | null
+          escalation_count?: number
+          escalation_reason?: string | null
+          external_eta_at?: string | null
           hotel_id: string
           id?: string
           image_url?: string | null
           input_method?: string
+          is_escalated?: boolean
           language?: string
           location_id?: string | null
           location_text?: string | null
@@ -582,7 +620,9 @@ export type Database = {
           reporter_email?: string | null
           reporter_type?: Database["public"]["Enums"]["reporter_type"]
           reporter_user_id?: string | null
+          resolve_due_at?: string | null
           resolved_at?: string | null
+          sla_tracked?: boolean
           started_at?: string | null
           status?: Database["public"]["Enums"]["ticket_status"]
           ticket_number: string
@@ -600,16 +640,22 @@ export type Database = {
           ai_status?: string
           ai_suggested_response?: string | null
           asset_id?: string | null
+          assign_due_at?: string | null
           assigned_at?: string | null
           assigned_technician_id?: string | null
           audio_url?: string | null
           category_id?: string | null
           created_at?: string
           description?: string
+          escalated_at?: string | null
+          escalation_count?: number
+          escalation_reason?: string | null
+          external_eta_at?: string | null
           hotel_id?: string
           id?: string
           image_url?: string | null
           input_method?: string
+          is_escalated?: boolean
           language?: string
           location_id?: string | null
           location_text?: string | null
@@ -619,7 +665,9 @@ export type Database = {
           reporter_email?: string | null
           reporter_type?: Database["public"]["Enums"]["reporter_type"]
           reporter_user_id?: string | null
+          resolve_due_at?: string | null
           resolved_at?: string | null
+          sla_tracked?: boolean
           started_at?: string | null
           status?: Database["public"]["Enums"]["ticket_status"]
           ticket_number?: string
@@ -726,12 +774,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -755,11 +803,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -780,11 +828,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -805,11 +853,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -822,11 +870,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }

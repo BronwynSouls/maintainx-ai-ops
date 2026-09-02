@@ -142,6 +142,12 @@ export const submitMaintenanceRequest = createServerFn({ method: "POST" })
         metadata: { reason: result.reason, confidence: result.confidence },
       });
 
+      // --- SLA targets (new tickets only) ---
+      const { applySlaTargets } = await import("./escalation.server");
+      await applySlaTargets({ ticketId: ticket.id, priority: result.priority });
+
+
+
       // --- Automatic technician assignment (skill + availability aware) ---
       const { assignTechnician } = await import("./assignment.server");
       const assignment = await assignTechnician({
@@ -230,6 +236,12 @@ export const submitMaintenanceRequest = createServerFn({ method: "POST" })
       metadata: { error: result.error },
     });
 
+    // --- SLA targets still apply when classification fails ---
+    const { applySlaTargets: applySla } = await import("./escalation.server");
+    await applySla({ ticketId: ticket.id, priority: "medium" });
+
+
+
     const { notifyReceptionistsOfAssignment } = await import("./notifications.server");
     await notifyReceptionistsOfAssignment({
       ticketId: ticket.id,
@@ -259,6 +271,9 @@ const TICKET_SELECT = `
   ai_status, ai_suggested_response, ai_response_at,
   needs_manual_classification, assigned_technician_id,
   created_at, updated_at, resolved_at, assigned_at, started_at,
+  sla_tracked, assign_due_at, resolve_due_at, external_eta_at,
+  is_escalated, escalated_at, escalation_reason, escalation_count,
+
   hotels ( id, name, city ),
   hotel_locations ( id, name, room_number ),
   maintenance_categories ( id, slug, name ),
@@ -380,6 +395,11 @@ export const updateTicket = createServerFn({ method: "POST" })
         categoryId: z.string().uuid().nullable().optional(),
         technicianId: z.string().uuid().nullable().optional(),
         note: z.string().trim().max(500).optional(),
+        /** Receptionist-recorded ETA for an external technician (ISO string). */
+        externalEtaAt: z.string().datetime().nullable().optional(),
+        /** Reason a technician is handing the ticket back to New Ticket. */
+        escalationReason: z.string().trim().max(500).optional(),
+
       })
       .parse(input),
   )
@@ -403,7 +423,7 @@ export const updateTicket = createServerFn({ method: "POST" })
     // Fetch current status so we can record status history
     const { data: current } = await context.supabase
       .from("tickets")
-      .select("id, status, assigned_technician_id, category_id")
+      .select("id, status, assigned_technician_id, category_id, sla_tracked, external_eta_at")
       .eq("id", data.id)
       .maybeSingle();
     const previousStatus = (current as { status?: TicketStatus } | null)?.status ?? null;
@@ -472,7 +492,22 @@ export const updateTicket = createServerFn({ method: "POST" })
     if (data.technicianId !== undefined) {
       patch["assigned_technician_id"] = data.technicianId;
       if (data.technicianId && !data.status) patch["status"] = "assigned";
+      // A fresh assignment starts a new ETA window.
+      if (data.externalEtaAt === undefined) patch["external_eta_at"] = null;
     }
+    if (data.externalEtaAt !== undefined) patch["external_eta_at"] = data.externalEtaAt;
+
+    // A technician handing the ticket back to "New Ticket" releases it so the
+    // receptionist can find another suitable technician.
+    const handedBack =
+      isTechnicianOnly &&
+      data.status === "new" &&
+      (previousStatus === "assigned" || previousStatus === "in_progress");
+    if (handedBack) {
+      patch["assigned_technician_id"] = null;
+      patch["external_eta_at"] = null;
+    }
+
 
     if (Object.keys(patch).length > 0) {
       const { error } = await context.supabase
@@ -506,7 +541,9 @@ export const updateTicket = createServerFn({ method: "POST" })
     if (data.priority) parts.push(`priority → ${data.priority}`);
     if (data.technicianId !== undefined)
       parts.push(data.technicianId ? "technician assigned" : "technician cleared");
+    if (data.externalEtaAt) parts.push(`external ETA recorded`);
     if (data.note) parts.push(data.note);
+
 
     if (parts.length > 0) {
       await context.supabase.from("ticket_activity").insert({
@@ -551,8 +588,38 @@ export const updateTicket = createServerFn({ method: "POST" })
       });
     }
 
+    // --- SLA / escalation side effects (tracked tickets only) ---
+    const isTracked = Boolean((current as { sla_tracked?: boolean } | null)?.sla_tracked);
+    if (isTracked) {
+      const { recomputeSlaTargets, escalateTicket } = await import("./escalation.server");
+      if (data.priority) await recomputeSlaTargets(data.id, data.priority);
+
+      if (handedBack) {
+        await escalateTicket({
+          ticketId: data.id,
+          key: `handback:${new Date().toISOString()}`,
+          actorLabel,
+          reason: `Technician ${actorLabel} returned the ticket to New Ticket — ${
+            data.escalationReason || "the issue could not be resolved"
+          }. A suitable technician must be assigned by the receptionist.`,
+        });
+      }
+    }
+
     return { ok: true as const, error: null };
   });
+
+/**
+ * SLA sweep — escalates tracked tickets that breached an assignment,
+ * ETA or resolution target. Called by staff dashboards on load.
+ */
+export const runSlaEscalationCheck = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async () => {
+    const { runEscalationSweep } = await import("./escalation.server");
+    return runEscalationSweep();
+  });
+
 
 /** Regenerate the AI suggested response for a ticket. */
 export const regenerateTicketResponse = createServerFn({ method: "POST" })

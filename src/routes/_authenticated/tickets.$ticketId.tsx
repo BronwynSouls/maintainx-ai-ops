@@ -1,12 +1,14 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowLeft, Copy, MessageSquareText, RefreshCw, Sparkles } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Copy, MessageSquareText, RefreshCw, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/app/app-shell";
-import { PriorityBadge, StatusBadge } from "@/components/app/badges";
+import { EscalatedBadge, PriorityBadge, StatusBadge } from "@/components/app/badges";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -17,6 +19,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { getTicket, regenerateTicketResponse, updateTicket } from "@/lib/tickets.functions";
 import { useAccount } from "@/hooks/useAccount";
+import { useState } from "react";
 import {
   formatDate,
   PRIORITY_ORDER,
@@ -25,6 +28,7 @@ import {
   type TicketPriority,
   type TicketStatus,
 } from "@/lib/domain";
+import { slaCountdown } from "@/lib/sla";
 
 export const Route = createFileRoute("/_authenticated/tickets/$ticketId")({
   head: () => ({
@@ -52,6 +56,9 @@ function TicketDetail() {
   const queryClient = useQueryClient();
   const { isTechnician, isManager, isReceptionist, roles } = useAccount();
   const canAssign = isReceptionist || roles.includes("admin");
+  const [eta, setEta] = useState("");
+  const [handbackReason, setHandbackReason] = useState("");
+  const [showHandback, setShowHandback] = useState(false);
 
   const { data, isLoading } = useQuery({
     queryKey: ["ticket", ticketId],
@@ -63,6 +70,8 @@ function TicketDetail() {
       status?: TicketStatus;
       priority?: TicketPriority;
       technicianId?: string | null;
+      externalEtaAt?: string | null;
+      escalationReason?: string;
     }) => saveTicket({ data: { id: ticketId, ...patch } }),
     onSuccess: (result) => {
       if (result && result.ok === false) {
@@ -70,6 +79,8 @@ function TicketDetail() {
         return;
       }
       toast.success("Ticket updated");
+      setShowHandback(false);
+      setHandbackReason("");
       queryClient.invalidateQueries({ queryKey: ["ticket", ticketId] });
       queryClient.invalidateQueries({ queryKey: ["tickets"] });
     },
@@ -116,6 +127,9 @@ function TicketDetail() {
     );
   }
 
+  const assignSla = slaCountdown(ticket.assign_due_at);
+  const resolveSla = slaCountdown(ticket.resolve_due_at);
+
   return (
     <AppShell
       title={ticket.ticket_number}
@@ -135,12 +149,30 @@ function TicketDetail() {
             <div className="flex flex-wrap items-center gap-2">
               <StatusBadge status={ticket.status} />
               <PriorityBadge priority={ticket.priority} />
+              {ticket.is_escalated && <EscalatedBadge />}
               {ticket.needs_manual_classification && (
                 <span className="rounded-md bg-status-pending px-2 py-0.5 text-xs font-medium text-status-pending-foreground">
                   Needs manual classification
                 </span>
               )}
             </div>
+            {ticket.is_escalated && ticket.escalation_reason && (
+              <div className="mt-3 flex items-start gap-2 rounded-lg border border-priority-critical/40 bg-priority-critical/10 p-3">
+                <AlertTriangle className="mt-0.5 size-4 shrink-0 text-priority-critical" aria-hidden />
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-priority-critical">
+                    Escalated · status unchanged
+                  </p>
+                  <p className="mt-0.5 text-sm break-words text-muted-foreground">
+                    {ticket.escalation_reason}
+                  </p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    {formatDate(ticket.escalated_at)}
+                    {ticket.escalation_count > 1 ? ` · escalated ${ticket.escalation_count} times` : ""}
+                  </p>
+                </div>
+              </div>
+            )}
             <h2 className="mt-3 text-lg font-semibold break-words">{ticket.title}</h2>
             <p className="mt-2 text-sm whitespace-pre-wrap break-words text-muted-foreground">
               {ticket.description}
@@ -284,6 +316,46 @@ function TicketDetail() {
         <aside className="surface-panel h-fit min-w-0 space-y-4 p-5">
           <h3 className="text-sm font-semibold">Manage ticket</h3>
 
+          {ticket.sla_tracked && (
+            <div className="rounded-lg border border-border p-3 text-xs">
+              <p className="text-sm font-semibold">SLA targets</p>
+              <p className="mt-1 text-muted-foreground">
+                Assign:{" "}
+                <span
+                  className={
+                    assignSla?.overdue && !ticket.assigned_technician_id
+                      ? "font-medium text-priority-critical"
+                      : "font-medium text-foreground"
+                  }
+                >
+                  {ticket.assigned_technician_id
+                    ? "met"
+                    : (assignSla?.label ?? "—")}
+                </span>
+              </p>
+              <p className="mt-0.5 text-muted-foreground">
+                Resolve:{" "}
+                <span
+                  className={
+                    resolveSla?.overdue && ticket.status !== "resolved"
+                      ? "font-medium text-priority-critical"
+                      : "font-medium text-foreground"
+                  }
+                >
+                  {ticket.status === "resolved" ? "met" : (resolveSla?.label ?? "—")}
+                </span>
+              </p>
+              {ticket.external_eta_at && (
+                <p className="mt-0.5 text-muted-foreground">
+                  External ETA:{" "}
+                  <span className="font-medium text-foreground">
+                    {formatDate(ticket.external_eta_at)}
+                  </span>
+                </p>
+              )}
+            </div>
+          )}
+
           {isTechnician && !isManager && (
             <div className="flex flex-wrap gap-2">
               {ticket.status !== "in_progress" && ticket.status !== "resolved" && (
@@ -305,6 +377,42 @@ function TicketDetail() {
                   Mark resolved
                 </Button>
               )}
+              {ticket.status !== "resolved" && ticket.status !== "new" && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setShowHandback((v) => !v)}
+                >
+                  Can't resolve
+                </Button>
+              )}
+            </div>
+          )}
+
+          {isTechnician && !isManager && showHandback && (
+            <div className="space-y-2 rounded-lg border border-border p-3">
+              <Label htmlFor="handback-reason">Why can't you resolve this?</Label>
+              <Textarea
+                id="handback-reason"
+                rows={3}
+                value={handbackReason}
+                onChange={(e) => setHandbackReason(e.target.value)}
+                placeholder="e.g. Specialist part required — outside my skill set"
+              />
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={mutation.isPending || handbackReason.trim().length < 3}
+                onClick={() =>
+                  mutation.mutate({ status: "new", escalationReason: handbackReason.trim() })
+                }
+              >
+                Return to New Ticket &amp; escalate
+              </Button>
+              <p className="text-xs text-muted-foreground">
+                This escalates the ticket and alerts the receptionist and hotel manager. The
+                receptionist will assign another technician.
+              </p>
             </div>
           )}
 
@@ -375,12 +483,45 @@ function TicketDetail() {
                 Only receptionists can assign or reassign tickets. AI assigns automatically where
                 possible.
               </p>
+
+              {ticket.technicians?.technician_type === "external" && (
+                <div className="space-y-2 border-t border-border pt-3">
+                  <Label htmlFor="ticket-eta">External technician ETA</Label>
+                  <Input
+                    id="ticket-eta"
+                    type="datetime-local"
+                    value={eta || toLocalInput(ticket.external_eta_at)}
+                    onChange={(e) => setEta(e.target.value)}
+                  />
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={mutation.isPending || !eta}
+                    onClick={() =>
+                      mutation.mutate({ externalEtaAt: new Date(eta).toISOString() })
+                    }
+                  >
+                    Save ETA
+                  </Button>
+                  <p className="text-xs text-muted-foreground">
+                    No escalation happens during the recorded travel window. The ticket escalates if
+                    the ETA passes without progress.
+                  </p>
+                </div>
+              )}
             </div>
           )}
         </aside>
       </div>
     </AppShell>
   );
+}
+
+function toLocalInput(value: string | null | undefined) {
+  if (!value) return "";
+  const d = new Date(value);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {

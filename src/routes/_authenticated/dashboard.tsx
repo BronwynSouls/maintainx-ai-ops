@@ -6,7 +6,7 @@ import { AppShell } from "@/components/app/app-shell";
 import { PriorityBadge, StatusBadge } from "@/components/app/badges";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { listTickets } from "@/lib/tickets.functions";
+import { listTickets, runSlaEscalationCheck } from "@/lib/tickets.functions";
 import { getTechnicianFeed } from "@/lib/technicians.functions";
 import { formatDate, STATUS_META, STATUS_ORDER, type TicketStatus } from "@/lib/domain";
 import { useAccount } from "@/hooks/useAccount";
@@ -27,9 +27,13 @@ function Dashboard() {
   const fetchTickets = useServerFn(listTickets);
   const { isTechnician, isManager, isReceptionist } = useAccount();
   const technicianOnly = isTechnician && !isManager && !isReceptionist;
+  const runSlaCheck = useServerFn(runSlaEscalationCheck);
   const { data, isLoading } = useQuery({
     queryKey: ["tickets"],
-    queryFn: () => fetchTickets(),
+    queryFn: async () => {
+      await runSlaCheck().catch(() => undefined);
+      return fetchTickets();
+    },
   });
 
   if (technicianOnly) return <TechnicianDashboard />;

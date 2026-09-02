@@ -4,7 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
 import { Search, Sparkles } from "lucide-react";
 import { AppShell } from "@/components/app/app-shell";
-import { PriorityBadge, StatusBadge } from "@/components/app/badges";
+import { EscalatedBadge, PriorityBadge, StatusBadge } from "@/components/app/badges";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { listTickets } from "@/lib/tickets.functions";
+import { listTickets, runSlaEscalationCheck } from "@/lib/tickets.functions";
 import {
   formatDate,
   PRIORITY_ORDER,
@@ -41,7 +41,16 @@ export const Route = createFileRoute("/_authenticated/tickets/")({
 
 function TicketsPage() {
   const fetchTickets = useServerFn(listTickets);
-  const { data, isLoading } = useQuery({ queryKey: ["tickets"], queryFn: () => fetchTickets() });
+  const runSlaCheck = useServerFn(runSlaEscalationCheck);
+  // Run the SLA sweep first so breached tickets are flagged in this list.
+  const { data, isLoading } = useQuery({
+    queryKey: ["tickets"],
+    queryFn: async () => {
+      await runSlaCheck().catch(() => undefined);
+      return fetchTickets();
+    },
+  });
+
 
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<"all" | TicketStatus>("all");
@@ -167,7 +176,12 @@ function TicketsPage() {
                       </span>
                     </td>
                     <td className="px-4 py-3"><PriorityBadge priority={ticket.priority} /></td>
-                    <td className="px-4 py-3"><StatusBadge status={ticket.status} /></td>
+                    <td className="px-4 py-3">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <StatusBadge status={ticket.status} />
+                        {ticket.is_escalated && <EscalatedBadge />}
+                      </div>
+                    </td>
                     <td className="px-4 py-3 text-xs text-muted-foreground">
                       {formatDate(ticket.created_at)}
                     </td>
