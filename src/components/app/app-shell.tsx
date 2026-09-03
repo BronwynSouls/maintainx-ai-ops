@@ -17,6 +17,7 @@ import {
 import { Brand } from "./brand";
 import { ThemeToggle } from "./theme-toggle";
 import { NotificationBell } from "./notification-bell";
+import { AssistantChat } from "./assistant-chat";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useAccount } from "@/hooks/useAccount";
@@ -180,6 +181,7 @@ export function AppShell({
         </header>
         <main className="min-w-0 overflow-x-hidden p-4 sm:p-6">{children}</main>
       </div>
+      <AssistantChat audience={primaryRole ?? "receptionist"} />
     </div>
   );
 }

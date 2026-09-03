@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Brand } from "@/components/app/brand";
 import { ThemeToggle } from "@/components/app/theme-toggle";
+import { AssistantChat } from "@/components/app/assistant-chat";
 import { MaintenanceRequestForm } from "@/components/app/maintenance-request-form";
 import { t } from "@/lib/i18n";
 
@@ -42,6 +43,7 @@ function GuestReport() {
         <MaintenanceRequestForm reporterType="guest" />
         <p className="text-xs text-muted-foreground">{t("guest.noPhone")}</p>
       </main>
+      <AssistantChat audience="guest" />
     </div>
   );
 }

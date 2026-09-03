@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { MapPin } from "lucide-react";
 import { Brand } from "@/components/app/brand";
 import { ThemeToggle } from "@/components/app/theme-toggle";
+import { AssistantChat } from "@/components/app/assistant-chat";
 import { MaintenanceRequestForm } from "@/components/app/maintenance-request-form";
 import { resolveQrCode } from "@/lib/directory.functions";
 import { t } from "@/lib/i18n";
@@ -71,6 +72,7 @@ function QrReport() {
         />
         <p className="text-xs text-muted-foreground">{t("guest.noPhone")}</p>
       </main>
+      <AssistantChat audience="guest" />
     </div>
   );
 }
