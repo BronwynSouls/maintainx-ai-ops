@@ -44,7 +44,7 @@ export const getAnalytics = createServerFn({ method: "GET" })
     const { data, error } = await context.supabase
       .from("tickets")
       .select(
-        `id, status, priority, created_at, assigned_at, started_at, resolved_at,
+        `id, status, priority, is_escalated, created_at, assigned_at, started_at, resolved_at,
          location_text, assigned_technician_id,
          maintenance_categories ( name ),
          hotel_locations ( name ),
@@ -65,6 +65,8 @@ export const getAnalytics = createServerFn({ method: "GET" })
 
     const byCategory = tally(tickets.map((t) => t.maintenance_categories?.name));
     const byStatus = tally(tickets.map((t) => statusLabels[t.status] ?? t.status));
+    const escalatedCount = tickets.filter((t) => t.is_escalated).length;
+    byStatus.push({ label: "Escalated", value: escalatedCount });
     const byPriority = tally(
       tickets.map((t) => t.priority.charAt(0).toUpperCase() + t.priority.slice(1)),
     );
