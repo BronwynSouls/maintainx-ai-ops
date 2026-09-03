@@ -201,7 +201,14 @@ function ReportsPage() {
                 color: "var(--foreground)",
               }}
             />
-            <Bar dataKey="value" name="Tickets" fill="var(--chart-4)" radius={[0, 4, 4, 0]} />
+            <Bar dataKey="value" name="Tickets" radius={[0, 4, 4, 0]}>
+              {data.byStatus.map((entry) => (
+                <Cell
+                  key={entry.label}
+                  fill={entry.label === "Escalated" ? "var(--priority-critical)" : "var(--chart-4)"}
+                />
+              ))}
+            </Bar>
           </BarChart>
         </ChartPanel>
       </div>
