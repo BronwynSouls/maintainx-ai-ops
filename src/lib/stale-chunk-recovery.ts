@@ -8,9 +8,15 @@ function isStaleChunkError(value: unknown): boolean {
   return (
     /Failed to fetch dynamically imported module/i.test(message) ||
     /Importing a module script failed/i.test(message) ||
-    /error loading dynamically imported module/i.test(message)
+    /error loading dynamically imported module/i.test(message) ||
+    /Unable to preload CSS/i.test(message) ||
+    // A route chunk that resolved to undefined after a deploy: the router then
+    // reads `.component` off nothing and the screen goes blank.
+    /reading 'component'/i.test(message) ||
+    /undefined is not an object \(evaluating '.*\.component'\)/i.test(message)
   );
 }
+
 
 export function reloadOnce() {
   if (typeof window === "undefined") return;
